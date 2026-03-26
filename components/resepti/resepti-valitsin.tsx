@@ -6,10 +6,7 @@ import { useAppState } from "@/lib/app-state";
 import { useFavorites } from "@/lib/favorites";
 import type { MealType } from "@/lib/constants";
 import { t, mealLabel, proteinLabel } from "@/lib/i18n";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Clock, Star, GripVertical, ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Star, GripVertical, ChevronLeft, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PROTEIN_TABS: ProteinSource[] = ["kana", "nauta", "porsas", "kala", "muu"];
@@ -27,262 +24,157 @@ export function ReseptiValitsin({ mealType, dayOfWeek, onSelect, onCancel }: Pro
   const [activeTab, setActiveTab] = useState<ProteinSource | "all">("all");
 
   const dietRecipes = RECIPES.filter((r) => r.dietCategory === dietti);
-
-  // Favorites for this diet (in order)
-  const favRecipes = favorites
-    .map((id) => dietRecipes.find((r) => r.id === id))
-    .filter((r): r is Recipe => r !== undefined);
-
-  // Non-favorite recipes, filtered by protein tab
+  const favRecipes = favorites.map((id) => dietRecipes.find((r) => r.id === id)).filter((r): r is Recipe => !!r);
   const nonFavRecipes = dietRecipes.filter((r) => !isFavorite(r.id));
-  const filteredRecipes =
-    activeTab === "all"
-      ? nonFavRecipes
-      : nonFavRecipes.filter((r) => r.proteinSource === activeTab);
-
-  // Check if this diet has protein sources tagged
+  const filteredRecipes = activeTab === "all" ? nonFavRecipes : nonFavRecipes.filter((r) => r.proteinSource === activeTab);
   const hasProteinSources = dietRecipes.some((r) => r.proteinSource);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onCancel} className="gap-1 text-muted-foreground">
-          <ChevronLeft className="h-4 w-4" />
-          {t("cancel", locale)}
-        </Button>
-        <div>
-          <h2 className="text-base font-semibold">{t("picker.title", locale)}</h2>
-          <p className="text-xs text-muted-foreground">{mealLabel(mealType, locale)}</p>
-        </div>
+      <div>
+        <h2 className="text-[22px] font-bold">{t("picker.title", locale)}</h2>
+        <p className="text-[13px]" style={{ color: "var(--ios-secondary-label)" }}>{mealLabel(mealType, locale)}</p>
       </div>
 
-      {/* Protein source tabs */}
       {hasProteinSources && (
-        <div className="flex gap-2 overflow-x-auto scrollbar-none">
-          <TabButton
-            active={activeTab === "all"}
+        <div className="flex overflow-x-auto scrollbar-none rounded-[9px] p-[2px]" style={{ background: "rgba(118,118,128,0.24)" }}>
+          <button
             onClick={() => setActiveTab("all")}
-            label={t("picker.all", locale)}
-          />
+            className="flex-1 min-w-0 rounded-[7px] px-2 py-[5px] text-[13px] font-medium"
+            style={{
+              background: activeTab === "all" ? "rgba(99,99,102,0.72)" : "transparent",
+              color: activeTab === "all" ? "#fff" : "var(--ios-secondary-label)",
+              boxShadow: activeTab === "all" ? "0 1px 3px rgba(0,0,0,0.3)" : "none",
+            }}
+          >
+            {t("picker.all", locale)}
+          </button>
           {PROTEIN_TABS.map((src) => {
             const count = nonFavRecipes.filter((r) => r.proteinSource === src).length;
             if (count === 0) return null;
             return (
-              <TabButton
+              <button
                 key={src}
-                active={activeTab === src}
                 onClick={() => setActiveTab(src)}
-                label={`${proteinLabel(src, locale)} (${count})`}
-              />
+                className="flex-1 min-w-0 rounded-[7px] px-1 py-[5px] text-[13px] font-medium"
+                style={{
+                  background: activeTab === src ? "rgba(99,99,102,0.72)" : "transparent",
+                  color: activeTab === src ? "#fff" : "var(--ios-secondary-label)",
+                  boxShadow: activeTab === src ? "0 1px 3px rgba(0,0,0,0.3)" : "none",
+                }}
+              >
+                {proteinLabel(src, locale)}
+              </button>
             );
           })}
         </div>
       )}
 
-      {/* Favorites section */}
       {favRecipes.length > 0 && (
         <>
-          <p className="text-xs font-semibold text-muted-foreground">{t("picker.favorites", locale)}</p>
-          <FavoritesList
-            recipes={favRecipes}
-            favorites={favorites}
-            onSelect={onSelect}
-            onToggleFavorite={toggleFavorite}
-            onReorder={reorderFavorites}
-          />
-          <Separator />
-          <p className="text-xs text-muted-foreground">{t("picker.otherRecipes", locale)}</p>
+          <p className="text-[13px] uppercase" style={{ color: "var(--ios-secondary-label)" }}>
+            {t("picker.favorites", locale)}
+          </p>
+          <div className="rounded-[10px] overflow-hidden" style={{ background: "var(--ios-card)" }}>
+            <FavoritesList recipes={favRecipes} favorites={favorites} onSelect={onSelect} onToggleFavorite={toggleFavorite} onReorder={reorderFavorites} />
+          </div>
+          <p className="text-[13px] uppercase" style={{ color: "var(--ios-secondary-label)" }}>
+            {t("picker.otherRecipes", locale)}
+          </p>
         </>
       )}
 
-      {/* Non-favorite recipes */}
-      <div className="space-y-2">
-        {filteredRecipes.map((recipe) => (
-          <RecipeOption
-            key={recipe.id}
-            recipe={recipe}
-            isFav={false}
-            onSelect={onSelect}
-            onToggleFavorite={toggleFavorite}
-          />
-        ))}
-        {filteredRecipes.length === 0 && (
-          <p className="py-4 text-center text-sm text-muted-foreground">
+      <div className="rounded-[10px] overflow-hidden" style={{ background: "var(--ios-card)" }}>
+        {filteredRecipes.length === 0 ? (
+          <p className="py-6 text-center text-[15px]" style={{ color: "var(--ios-secondary-label)" }}>
             {t("picker.noRecipes", locale)}
           </p>
+        ) : (
+          filteredRecipes.map((recipe, i) => (
+            <RecipeRow key={recipe.id} recipe={recipe} isFav={false} showSeparator={i < filteredRecipes.length - 1}
+              onSelect={onSelect} onToggleFavorite={toggleFavorite} />
+          ))
         )}
       </div>
     </div>
   );
 }
 
-function TabButton({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-        active
-          ? "bg-primary text-primary-foreground"
-          : "bg-muted text-muted-foreground hover:bg-accent"
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
-function FavoritesList({
-  recipes,
-  favorites,
-  onSelect,
-  onToggleFavorite,
-  onReorder,
-}: {
-  recipes: Recipe[];
-  favorites: number[];
-  onSelect: (id: number) => void;
-  onToggleFavorite: (id: number) => void;
-  onReorder: (from: number, to: number) => void;
+function FavoritesList({ recipes, favorites, onSelect, onToggleFavorite, onReorder }: {
+  recipes: Recipe[]; favorites: number[]; onSelect: (id: number) => void;
+  onToggleFavorite: (id: number) => void; onReorder: (from: number, to: number) => void;
 }) {
   const [dragging, setDragging] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const touchStartY = useRef<number>(0);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const handleDragStart = useCallback(
-    (index: number, startY: number) => {
-      setDragging(index);
-      touchStartY.current = startY;
-    },
-    []
-  );
-
-  const handleDragMove = useCallback(
-    (clientY: number) => {
-      if (dragging === null) return;
-      // Find which item we're over
-      for (let i = 0; i < itemRefs.current.length; i++) {
-        const el = itemRefs.current[i];
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        if (clientY >= rect.top && clientY <= rect.bottom) {
-          setDragOverIndex(i);
-          return;
-        }
-      }
-    },
-    [dragging]
-  );
-
-  const handleDragEnd = useCallback(() => {
-    if (dragging !== null && dragOverIndex !== null && dragging !== dragOverIndex) {
-      onReorder(dragging, dragOverIndex);
-    }
-    setDragging(null);
-    setDragOverIndex(null);
-  }, [dragging, dragOverIndex, onReorder]);
-
   return (
-    <div className="space-y-2">
+    <>
       {recipes.map((recipe, index) => (
         <div
           key={recipe.id}
           ref={(el) => { itemRefs.current[index] = el; }}
-          className={cn(
-            "flex items-center gap-1",
-            dragging === index && "opacity-50",
-            dragOverIndex === index && dragging !== index && "border-t-2 border-primary"
-          )}
+          className={cn(dragging === index && "opacity-50", dragOverIndex === index && dragging !== index && "border-t-2")}
+          style={{ borderColor: "var(--ios-blue)" }}
         >
-          {/* Grab handle */}
-          <div
-            className="shrink-0 cursor-grab touch-none p-1 text-muted-foreground active:cursor-grabbing"
-            onTouchStart={(e) => handleDragStart(index, e.touches[0].clientY)}
-            onTouchMove={(e) => handleDragMove(e.touches[0].clientY)}
-            onTouchEnd={handleDragEnd}
-            onMouseDown={(e) => handleDragStart(index, e.clientY)}
-          >
-            <GripVertical className="h-4 w-4" />
-          </div>
-          <div className="flex-1">
-            <RecipeOption
-              recipe={recipe}
-              isFav={true}
-              onSelect={onSelect}
-              onToggleFavorite={onToggleFavorite}
-            />
+          <div className="flex items-center">
+            <div
+              className="shrink-0 touch-none px-2 py-3"
+              style={{ color: "var(--ios-gray)" }}
+              onTouchStart={() => setDragging(index)}
+              onTouchMove={(e) => {
+                const y = e.touches[0].clientY;
+                for (let i = 0; i < itemRefs.current.length; i++) {
+                  const el = itemRefs.current[i];
+                  if (!el) continue;
+                  const r = el.getBoundingClientRect();
+                  if (y >= r.top && y <= r.bottom) { setDragOverIndex(i); return; }
+                }
+              }}
+              onTouchEnd={() => {
+                if (dragging !== null && dragOverIndex !== null && dragging !== dragOverIndex) onReorder(dragging, dragOverIndex);
+                setDragging(null); setDragOverIndex(null);
+              }}
+            >
+              <GripVertical className="h-4 w-4" />
+            </div>
+            <div className="flex-1">
+              <RecipeRow recipe={recipe} isFav={true} showSeparator={index < recipes.length - 1}
+                onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+            </div>
           </div>
         </div>
       ))}
-    </div>
+    </>
   );
 }
 
-function RecipeOption({
-  recipe,
-  isFav,
-  onSelect,
-  onToggleFavorite,
-}: {
-  recipe: Recipe;
-  isFav: boolean;
-  onSelect: (id: number) => void;
-  onToggleFavorite: (id: number) => void;
+function RecipeRow({ recipe, isFav, showSeparator, onSelect, onToggleFavorite }: {
+  recipe: Recipe; isFav: boolean; showSeparator: boolean;
+  onSelect: (id: number) => void; onToggleFavorite: (id: number) => void;
 }) {
   const totalTime = recipe.prepTimeMinutes + recipe.cookTimeMinutes;
-
   return (
-    <Card className="transition-colors hover:bg-accent/50">
-      <CardContent className="flex items-center gap-2 py-3">
-        {/* Star */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite(recipe.id);
-          }}
-          className="shrink-0 p-1"
-        >
-          <Star
-            className={cn(
-              "h-4 w-4",
-              isFav
-                ? "fill-yellow-400 text-yellow-400"
-                : "text-muted-foreground"
-            )}
-          />
-        </button>
-
-        {/* Recipe info — clickable */}
-        <button
-          onClick={() => onSelect(recipe.id)}
-          className="flex flex-1 items-center justify-between text-left"
-        >
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{recipe.name}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {recipe.description}
-            </p>
+    <div
+      className="flex items-center ios-row"
+      style={{ borderBottom: showSeparator ? "0.5px solid var(--ios-separator)" : "none" }}
+    >
+      <button className="shrink-0 p-3" onClick={(e) => { e.stopPropagation(); onToggleFavorite(recipe.id); }}>
+        <Star className={cn("h-4 w-4", isFav ? "fill-yellow-400 text-yellow-400" : "")}
+          style={isFav ? {} : { color: "var(--ios-gray)" }} />
+      </button>
+      <button onClick={() => onSelect(recipe.id)} className="flex flex-1 items-center justify-between pr-4 py-[10px] text-left min-w-0">
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] truncate">{recipe.name}</p>
+          <p className="text-[13px] truncate" style={{ color: "var(--ios-secondary-label)" }}>{recipe.description}</p>
+        </div>
+        <div className="ml-2 shrink-0 text-right">
+          <p className="text-[15px] font-mono font-semibold">{recipe.calories}</p>
+          <div className="flex items-center gap-0.5 text-[11px]" style={{ color: "var(--ios-secondary-label)" }}>
+            <Clock className="h-2.5 w-2.5" />{totalTime}min
           </div>
-          <div className="ml-2 shrink-0 text-right">
-            <p className="font-mono text-sm font-semibold">
-              {recipe.calories}
-            </p>
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Clock className="h-2.5 w-2.5" />
-              {totalTime}min
-            </div>
-          </div>
-        </button>
-      </CardContent>
-    </Card>
+        </div>
+      </button>
+    </div>
   );
 }

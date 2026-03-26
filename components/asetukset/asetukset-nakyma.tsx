@@ -2,9 +2,7 @@
 
 import { useAppState } from "@/lib/app-state";
 import { t, type Locale } from "@/lib/i18n";
-import { Card, CardContent } from "@/components/ui/card";
 import { Check } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const LANGUAGES: { code: Locale; flag: string; labelKey: "settings.finnish" | "settings.english" }[] = [
   { code: "fi", flag: "🇫🇮", labelKey: "settings.finnish" },
@@ -16,38 +14,32 @@ export function AsetuksetNakyma() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold">{t("settings.title", locale)}</h2>
+      <h2 className="text-[28px] font-bold">{t("settings.title", locale)}</h2>
 
-      <div className="space-y-3">
-        <p className="text-sm font-medium text-muted-foreground">
+      <div>
+        <p className="text-[13px] uppercase px-4 mb-1" style={{ color: "var(--ios-secondary-label)" }}>
           {t("settings.language", locale)}
         </p>
-        {LANGUAGES.map((lang) => (
-          <button
-            key={lang.code}
-            onClick={() => setLocale(lang.code)}
-            className="w-full"
-          >
-            <Card
-              className={cn(
-                "transition-colors",
-                locale === lang.code && "ring-2 ring-primary"
-              )}
+        <div className="rounded-[10px] overflow-hidden" style={{ background: "var(--ios-card)" }}>
+          {LANGUAGES.map((lang, i) => (
+            <button
+              key={lang.code}
+              onClick={() => setLocale(lang.code)}
+              className="flex w-full items-center justify-between px-4 py-[11px] ios-row"
+              style={{
+                borderBottom: i < LANGUAGES.length - 1 ? "0.5px solid var(--ios-separator)" : "none",
+              }}
             >
-              <CardContent className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{lang.flag}</span>
-                  <span className="font-medium">
-                    {t(lang.labelKey, locale)}
-                  </span>
-                </div>
-                {locale === lang.code && (
-                  <Check className="h-5 w-5 text-primary" />
-                )}
-              </CardContent>
-            </Card>
-          </button>
-        ))}
+              <div className="flex items-center gap-3">
+                <span className="text-[20px]">{lang.flag}</span>
+                <span className="text-[17px]">{t(lang.labelKey, locale)}</span>
+              </div>
+              {locale === lang.code && (
+                <Check className="h-5 w-5" style={{ color: "var(--ios-blue)" }} />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

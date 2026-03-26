@@ -2,17 +2,12 @@
 
 import { useState } from "react";
 import { ShoppingCart, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useAppState } from "@/lib/app-state";
 import { t } from "@/lib/i18n";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { Ingredient } from "@/lib/types";
 
-interface OstoslistaProps {
-  ingredients: Ingredient[];
-  recipeName: string;
-}
+interface OstoslistaProps { ingredients: Ingredient[]; recipeName: string }
 
 export function Ostoslista({ ingredients, recipeName }: OstoslistaProps) {
   const { locale } = useAppState();
@@ -20,71 +15,61 @@ export function Ostoslista({ ingredients, recipeName }: OstoslistaProps) {
   const [checked, setChecked] = useState<Set<number>>(new Set());
 
   function toggle(index: number) {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
+    setChecked((prev) => { const n = new Set(prev); if(n.has(index)) n.delete(index); else n.add(index); return n; });
   }
 
   if (!open) {
     return (
-      <Button
-        variant="outline"
-        className="w-full gap-2"
+      <button
         onClick={() => setOpen(true)}
+        className="flex w-full items-center justify-center gap-2 rounded-[10px] py-[11px] text-[17px] font-medium"
+        style={{ background: "var(--ios-card)", color: "var(--ios-blue)" }}
       >
-        <ShoppingCart className="h-4 w-4" />
+        <ShoppingCart className="h-5 w-5" />
         {t("recipe.shoppingList", locale)}
-      </Button>
+      </button>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <ShoppingCart className="h-4 w-4" />
-            {t("recipe.shoppingList", locale)}
-          </CardTitle>
-          <span className="text-xs text-muted-foreground">
-            {checked.size}/{ingredients.length}
-          </span>
+    <div className="rounded-[10px] overflow-hidden" style={{ background: "var(--ios-card)" }}>
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-2">
+          <ShoppingCart className="h-4 w-4" style={{ color: "var(--ios-blue)" }} />
+          <span className="text-[15px] font-semibold">{t("recipe.shoppingList", locale)}</span>
         </div>
-        <p className="text-xs text-muted-foreground">{recipeName}</p>
-      </CardHeader>
-      <CardContent>
-        <ul className="space-y-2">
-          {ingredients.map((item, i) => (
-            <li key={i}>
-              <button
-                onClick={() => toggle(i)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-md p-2 text-left text-sm transition-colors hover:bg-accent",
-                  checked.has(i) && "text-muted-foreground line-through"
-                )}
-              >
-                <div
-                  className={cn(
-                    "flex h-5 w-5 shrink-0 items-center justify-center rounded border",
-                    checked.has(i)
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-muted-foreground"
-                  )}
-                >
-                  {checked.has(i) && <Check className="h-3 w-3" />}
-                </div>
-                <span className="shrink-0 font-mono text-xs">
-                  {item.amount} {item.unit}
-                </span>
-                <span>{item.name}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+        <span className="text-[13px]" style={{ color: "var(--ios-secondary-label)" }}>
+          {checked.size}/{ingredients.length}
+        </span>
+      </div>
+      {ingredients.map((item, i) => (
+        <button
+          key={i}
+          onClick={() => toggle(i)}
+          className={cn(
+            "flex w-full items-center gap-3 px-4 py-[10px] text-[15px] text-left",
+            checked.has(i) && "line-through"
+          )}
+          style={{
+            borderTop: "0.5px solid var(--ios-separator)",
+            color: checked.has(i) ? "var(--ios-gray)" : undefined,
+          }}
+        >
+          <div
+            className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full"
+            style={{
+              background: checked.has(i) ? "var(--ios-blue)" : "transparent",
+              border: checked.has(i) ? "none" : "2px solid var(--ios-gray)",
+            }}
+          >
+            {checked.has(i) && <Check className="h-3 w-3 text-white" />}
+          </div>
+          <span className="shrink-0 font-mono text-[13px]" style={{ color: "var(--ios-secondary-label)" }}>
+            {item.amount} {item.unit}
+          </span>
+          <span>{item.name}</span>
+        </button>
+      ))}
+    </div>
   );
 }

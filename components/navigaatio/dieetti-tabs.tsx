@@ -1,25 +1,27 @@
 "use client";
 
-import { DIET_CATEGORIES, type DietCategory } from "@/lib/constants";
+import { DIET_CATEGORIES } from "@/lib/constants";
 import { useAppState } from "@/lib/app-state";
 import { dietLabel } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
 
 export function DieettiTabs() {
   const { dietti, setDietti, locale } = useAppState();
 
   return (
-    <div className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-none">
+    <div
+      className="flex overflow-x-auto scrollbar-none rounded-[9px] p-[2px]"
+      style={{ background: "rgba(118,118,128,0.24)" }}
+    >
       {DIET_CATEGORIES.map((cat) => (
         <button
           key={cat}
           onClick={() => setDietti(cat)}
-          className={cn(
-            "shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-            dietti === cat
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-accent"
-          )}
+          className="flex-1 min-w-0 rounded-[7px] px-2 py-[5px] text-[13px] font-medium transition-all"
+          style={{
+            background: dietti === cat ? "rgba(99,99,102,0.72)" : "transparent",
+            color: dietti === cat ? "#fff" : "var(--ios-secondary-label)",
+            boxShadow: dietti === cat ? "0 1px 3px rgba(0,0,0,0.3)" : "none",
+          }}
         >
           {dietLabel(cat, locale)}
         </button>

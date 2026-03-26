@@ -10,72 +10,31 @@ interface RavintotiedotProps {
   fatGrams: number;
 }
 
-export function Ravintotiedot({
-  calories,
-  proteinGrams,
-  carbsGrams,
-  fatGrams,
-}: RavintotiedotProps) {
+export function Ravintotiedot({ proteinGrams, carbsGrams, fatGrams }: RavintotiedotProps) {
   const { locale } = useAppState();
   const total = proteinGrams + carbsGrams + fatGrams;
-  const proteinPct = total > 0 ? (proteinGrams / total) * 100 : 0;
-  const carbsPct = total > 0 ? (carbsGrams / total) * 100 : 0;
-  const fatPct = total > 0 ? (fatGrams / total) * 100 : 0;
+  const bars = [
+    { label: t("day.protein", locale), grams: proteinGrams, pct: total > 0 ? (proteinGrams / total) * 100 : 0, color: "#0A84FF" },
+    { label: t("day.carbs", locale), grams: carbsGrams, pct: total > 0 ? (carbsGrams / total) * 100 : 0, color: "#FF9F0A" },
+    { label: t("day.fat", locale), grams: fatGrams, pct: total > 0 ? (fatGrams / total) * 100 : 0, color: "#FF453A" },
+  ];
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-semibold">{t("recipe.nutrition", locale)}</h3>
-      <div className="text-center">
-        <p className="font-mono text-3xl font-bold">{calories}</p>
-        <p className="text-sm text-muted-foreground">kcal / annos</p>
-      </div>
-      <div className="space-y-3">
-        <MacroBar
-          label={t("day.protein", locale)}
-          grams={proteinGrams}
-          percentage={proteinPct}
-          color="bg-blue-500"
-        />
-        <MacroBar
-          label={t("day.carbs", locale)}
-          grams={carbsGrams}
-          percentage={carbsPct}
-          color="bg-amber-500"
-        />
-        <MacroBar
-          label={t("day.fat", locale)}
-          grams={fatGrams}
-          percentage={fatPct}
-          color="bg-rose-500"
-        />
-      </div>
-    </div>
-  );
-}
-
-function MacroBar({
-  label,
-  grams,
-  percentage,
-  color,
-}: {
-  label: string;
-  grams: number;
-  percentage: number;
-  color: string;
-}) {
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-sm">
-        <span>{label}</span>
-        <span className="font-mono">{grams}g</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-muted">
-        <div
-          className={`h-full rounded-full ${color}`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
+    <div className="rounded-[10px] p-4 space-y-3" style={{ background: "var(--ios-card)" }}>
+      <p className="text-[13px] font-semibold" style={{ color: "var(--ios-secondary-label)" }}>
+        {t("recipe.nutrition", locale)}
+      </p>
+      {bars.map(({ label, grams, pct, color }) => (
+        <div key={label} className="space-y-1">
+          <div className="flex justify-between text-[13px]">
+            <span>{label}</span>
+            <span className="font-mono">{grams}g</span>
+          </div>
+          <div className="h-[6px] rounded-full overflow-hidden" style={{ background: "var(--ios-gray4)" }}>
+            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
