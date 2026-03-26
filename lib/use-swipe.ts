@@ -18,7 +18,6 @@ export function useSwipeBack({ canSwipeBack, onSwipeBack }: SwipeConfig) {
   const onTouchStart = useCallback(
     (e: TouchEvent) => {
       if (!canSwipeBack) return;
-      // Only start from left 40px edge (like iOS)
       if (e.touches[0].clientX > 40) return;
       touchStart.current = {
         x: e.touches[0].clientX,
@@ -65,20 +64,24 @@ export function useSwipeBack({ canSwipeBack, onSwipeBack }: SwipeConfig) {
       const threshold = screenWidth.current * 0.5;
 
       if (dx > threshold) {
-        // Auto-complete the swipe
         setIsCompleting(true);
         setDragX(screenWidth.current);
         setTimeout(() => {
           onSwipeBack();
-          setIsDragging(false);
-          setIsCompleting(false);
-          setDragX(0);
+          // Reset after state change
+          requestAnimationFrame(() => {
+            setIsDragging(false);
+            setIsCompleting(false);
+            setDragX(0);
+          });
         }, 250);
       } else {
-        // Snap back
+        // Animate snap back
+        setIsCompleting(true);
         setDragX(0);
         setTimeout(() => {
           setIsDragging(false);
+          setIsCompleting(false);
         }, 250);
       }
 
@@ -88,7 +91,6 @@ export function useSwipeBack({ canSwipeBack, onSwipeBack }: SwipeConfig) {
     [isDragging, onSwipeBack]
   );
 
-  // Progress 0-1 of how far the swipe has gone
   const progress = isDragging ? Math.min(dragX / screenWidth.current, 1) : 0;
 
   return {

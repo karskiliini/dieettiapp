@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AppProvider, useAppState } from "@/lib/app-state";
 import { useSwipeBack } from "@/lib/use-swipe";
 import { MEALS_BY_COUNT, type MealType } from "@/lib/constants";
@@ -35,12 +35,15 @@ function AppContent() {
   const [view, setView] = useState<View>({ type: "viikko" });
   const [history, setHistory] = useState<View[]>([]);
   const [slideDir, setSlideDir] = useState<"in" | "out" | null>(null);
+  // Track if last navigation was a swipe (skip slideDir animation)
+  const [wasSwipe, setWasSwipe] = useState(false);
 
   const canGoBack = view.type !== "viikko";
   const prevView = history[history.length - 1] ?? null;
 
   const goTo = useCallback(
     (next: View) => {
+      setWasSwipe(false);
       setSlideDir("in");
       setHistory((h) => [...h, view]);
       setView(next);
@@ -48,8 +51,25 @@ function AppContent() {
     [view]
   );
 
-  const goBack = useCallback(() => {
+  // goBack used by button — plays animation
+  const goBackAnimated = useCallback(() => {
+    setWasSwipe(false);
     setSlideDir("out");
+    setHistory((h) => {
+      const prev = h[h.length - 1];
+      if (prev) {
+        setView(prev);
+        return h.slice(0, -1);
+      }
+      setView({ type: "viikko" });
+      return [];
+    });
+  }, []);
+
+  // goBack used by swipe — no animation (swipe already handled it)
+  const goBackSilent = useCallback(() => {
+    setWasSwipe(true);
+    setSlideDir(null);
     setHistory((h) => {
       const prev = h[h.length - 1];
       if (prev) {
@@ -69,7 +89,7 @@ function AppContent() {
 
   const swipe = useSwipeBack({
     canSwipeBack: canGoBack && !jiggleMode,
-    onSwipeBack: goBack,
+    onSwipeBack: goBackSilent,
   });
 
   // Build meal plan with overrides
@@ -101,48 +121,74 @@ function AppContent() {
     (e: React.MouseEvent) => {
       if (!jiggleMode) return;
       const target = e.target as HTMLElement;
-      if (target === e.currentTarget || target.tagName === "MAIN") {
+      if (target === e.currentTarget) {
         setJiggleMode(false);
       }
     },
     [jiggleMode, setJiggleMode]
   );
 
+  // Animation classes for non-swipe navigations
   const slideClass =
-    slideDir === "in"
+    !wasSwipe && slideDir === "in"
       ? "animate-slide-in"
-      : slideDir === "out"
+      : !wasSwipe && slideDir === "out"
         ? "animate-slide-out"
         : "";
 
-  // During swipe: current page slides right, previous page is visible behind
   const isSwiping = swipe.isDragging || swipe.isCompleting;
   const transition = swipe.isCompleting
-    ? "transform 0.25s ease-out, opacity 0.25s ease-out"
+    ? "transform 0.25s ease-out, opacity 0.25s ease-out, box-shadow 0.25s ease-out"
     : swipe.isDragging
       ? "none"
       : undefined;
 
-  const currentStyle = isSwiping
-    ? {
-        transform: `translateX(${swipe.dragX}px)`,
-        transition,
-        boxShadow: "-8px 0 30px rgba(0,0,0,0.15)",
-      }
-    : undefined;
-
-  // Previous page sits behind at slight offset, scales up as you swipe
   const prevScale = 0.92 + swipe.progress * 0.08;
   const prevOpacity = 0.4 + swipe.progress * 0.6;
-  const prevStyle = isSwiping
-    ? {
-        transform: `scale(${prevScale})`,
-        opacity: prevOpacity,
-        transition,
-      }
-    : undefined;
 
-  function renderView(v: View) {
+  function renderHeader(v: View, isBack: boolean) {
+    const showBackBtn = v.type !== "viikko";
+    return (
+      <header className="shrink-0 border-b border-border bg-background">
+        <div className="mx-auto max-w-5xl">
+          <div className="flex items-center justify-between px-4 py-3">
+            {showBackBtn ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={
+                  isBack
+                    ? undefined
+                    : () => {
+                        setJiggleMode(false);
+                        goBackAnimated();
+                      }
+                }
+                className="gap-1 text-muted-foreground"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Takaisin
+              </Button>
+            ) : (
+              <h1 className="text-lg font-bold">Dieettiapp</h1>
+            )}
+            {jiggleMode && v.type !== "valitse-resepti" && !isBack && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setJiggleMode(false)}
+              >
+                Valmis
+              </Button>
+            )}
+          </div>
+          {v.type === "viikko" && !jiggleMode && <DieettiTabs />}
+        </div>
+      </header>
+    );
+  }
+
+  function renderContent(v: View) {
     if (v.type === "viikko") {
       return (
         <ViikkoNakymaInline
@@ -161,9 +207,7 @@ function AppContent() {
       return (
         <PaivaNakyma
           dayOfWeek={v.dayOfWeek}
-          meals={
-            mealPlan.filter((m) => m.dayOfWeek === v.dayOfWeek) as any
-          }
+          meals={mealPlan.filter((m) => m.dayOfWeek === v.dayOfWeek) as any}
           mealCount={mealCount}
           onRecipeClick={(id, mealType) =>
             handleMealClick(id, v.dayOfWeek, mealType)
@@ -179,10 +223,10 @@ function AppContent() {
         <ReseptiValitsin
           mealType={v.mealType}
           dayOfWeek={v.dayOfWeek}
-          onCancel={goBack}
+          onCancel={goBackAnimated}
           onSelect={(recipeId) => {
             overrideMeal(v.dayOfWeek, v.mealType, recipeId);
-            goBack();
+            goBackAnimated();
           }}
         />
       );
@@ -190,72 +234,64 @@ function AppContent() {
     return null;
   }
 
+  // Full screen for a view (header + content)
+  function renderFullScreen(
+    v: View,
+    isBack: boolean,
+    style?: React.CSSProperties,
+    className?: string
+  ) {
+    return (
+      <div
+        className={`absolute inset-0 flex flex-col bg-background ${className || ""}`}
+        style={style}
+      >
+        {renderHeader(v, isBack)}
+        <div
+          className="flex-1 overflow-auto p-4"
+          onClick={isBack ? undefined : handleBackgroundClick}
+        >
+          <div className="mx-auto flex h-full max-w-5xl flex-col">
+            {renderContent(v)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="relative flex h-[100dvh] flex-col overflow-hidden"
+      className="relative h-[100dvh] overflow-hidden"
       onTouchStart={swipe.onTouchStart}
       onTouchMove={swipe.onTouchMove}
       onTouchEnd={swipe.onTouchEnd}
     >
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto max-w-5xl">
-          <div className="flex items-center justify-between px-4 py-3">
-            {canGoBack ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setJiggleMode(false);
-                  goBack();
-                }}
-                className="gap-1 text-muted-foreground"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Takaisin
-              </Button>
-            ) : (
-              <h1 className="text-lg font-bold">Dieettiapp</h1>
-            )}
-            {jiggleMode && view.type !== "valitse-resepti" && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setJiggleMode(false)}
-              >
-                Valmis
-              </Button>
-            )}
-          </div>
-          {view.type === "viikko" && !jiggleMode && <DieettiTabs />}
-        </div>
-      </header>
+      {isSwiping ? (
+        <>
+          {/* Behind: previous view (complete with header) */}
+          {prevView &&
+            renderFullScreen(prevView, true, {
+              transform: `scale(${prevScale})`,
+              opacity: prevOpacity,
+              transition,
+              zIndex: 1,
+            })}
 
-      {/* Content area with layered views for swipe */}
-      <div className="relative flex-1 overflow-hidden">
-        {/* Previous view (behind) — only rendered during swipe */}
-        {isSwiping && prevView && (
-          <div
-            className="absolute inset-0 overflow-auto bg-background p-4"
-            style={prevStyle}
-          >
-            <div className="mx-auto max-w-5xl">
-              {renderView(prevView)}
-            </div>
-          </div>
-        )}
-
-        {/* Current view (on top) */}
-        <main
-          className={`absolute inset-0 overflow-auto bg-background p-4 ${!isSwiping ? slideClass : ""}`}
-          style={currentStyle}
-          onClick={handleBackgroundClick}
-        >
-          <div className="mx-auto flex h-full max-w-5xl flex-col">
-            {renderView(view)}
-          </div>
-        </main>
-      </div>
+          {/* Front: current view sliding away */}
+          {renderFullScreen(view, false, {
+            transform: `translateX(${swipe.dragX}px)`,
+            boxShadow:
+              swipe.dragX > 0
+                ? "-8px 0 30px rgba(0,0,0,0.15)"
+                : "none",
+            transition,
+            zIndex: 2,
+          })}
+        </>
+      ) : (
+        /* Normal: single view */
+        renderFullScreen(view, false, { zIndex: 1 }, slideClass)
+      )}
     </div>
   );
 }
