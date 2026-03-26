@@ -140,7 +140,14 @@ function SwipeableMealCell({
   const bgOpacity = 0.6 + swipeProgress * 0.4;
 
   return (
-    <div className="relative overflow-hidden" style={{ borderBottom: showSeparator ? "0.5px solid var(--ios-separator)" : "none" }}>
+    <div
+      className="relative overflow-hidden select-none"
+      style={{ borderBottom: showSeparator ? "0.5px solid var(--ios-separator)" : "none", touchAction: "pan-y" }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       {/* Swap action behind */}
       {Math.abs(offsetX) > 5 && (
         <div
@@ -160,16 +167,12 @@ function SwipeableMealCell({
       )}
       {/* Foreground */}
       <div
-        className="relative cursor-pointer select-none ios-row"
+        className="relative cursor-pointer ios-row"
         style={{
           transform: `translateX(${offsetX}px)`,
           transition: isAnimating ? "transform 0.25s ease-out" : "none",
           background: "var(--ios-card)",
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onContextMenu={(e) => e.preventDefault()}
       >
         <div className="flex items-center justify-between px-4 py-[8px]">
           <div className="min-w-0 flex-1">
