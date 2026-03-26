@@ -104,48 +104,104 @@ function FavoritesList({ recipes, favorites, onSelect, onToggleFavorite, onReord
   recipes: Recipe[]; favorites: number[]; onSelect: (id: number) => void;
   onToggleFavorite: (id: number) => void; onReorder: (from: number, to: number) => void;
 }) {
-  const [dragging, setDragging] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+  const [dragY, setDragY] = useState(0);
+  const [startY, setStartY] = useState(0);
+  const [itemHeight, setItemHeight] = useState(60);
+  const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  const handleTouchStart = useCallback((index: number, y: number) => {
+    const el = itemRefs.current[index];
+    if (el) setItemHeight(el.getBoundingClientRect().height);
+    setDragIndex(index);
+    setOverIndex(index);
+    setStartY(y);
+    setDragY(0);
+  }, []);
+
+  const handleTouchMove = useCallback((y: number) => {
+    if (dragIndex === null) return;
+    setDragY(y - startY);
+    // Determine which slot we're over
+    for (let i = 0; i < itemRefs.current.length; i++) {
+      const el = itemRefs.current[i];
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      if (y < mid) { setOverIndex(i); return; }
+    }
+    setOverIndex(recipes.length - 1);
+  }, [dragIndex, startY, recipes.length]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (dragIndex !== null && overIndex !== null && dragIndex !== overIndex) {
+      onReorder(dragIndex, overIndex);
+    }
+    setDragIndex(null);
+    setOverIndex(null);
+    setDragY(0);
+  }, [dragIndex, overIndex, onReorder]);
+
+  // Calculate visual offsets for each item during drag
+  function getItemStyle(index: number): React.CSSProperties {
+    if (dragIndex === null || overIndex === null) return {};
+
+    if (index === dragIndex) {
+      return {
+        position: "relative",
+        zIndex: 50,
+        transform: `translateY(${dragY}px) scale(1.03)`,
+        boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
+        transition: "box-shadow 0.15s, scale 0.15s",
+        borderRadius: 10,
+        background: "var(--ios-gray5)",
+      };
+    }
+
+    // Items between dragIndex and overIndex need to shift
+    if (dragIndex < overIndex) {
+      // Dragging down: items between (dragIndex, overIndex] shift up
+      if (index > dragIndex && index <= overIndex) {
+        return { transform: `translateY(-${itemHeight}px)`, transition: "transform 0.2s ease" };
+      }
+    } else {
+      // Dragging up: items between [overIndex, dragIndex) shift down
+      if (index >= overIndex && index < dragIndex) {
+        return { transform: `translateY(${itemHeight}px)`, transition: "transform 0.2s ease" };
+      }
+    }
+
+    return { transition: "transform 0.2s ease" };
+  }
+
   return (
-    <>
+    <div ref={containerRef} className="relative">
       {recipes.map((recipe, index) => (
         <div
           key={recipe.id}
           ref={(el) => { itemRefs.current[index] = el; }}
-          className={cn(dragging === index && "opacity-50", dragOverIndex === index && dragging !== index && "border-t-2")}
-          style={{ borderColor: "var(--ios-blue)" }}
+          style={getItemStyle(index)}
         >
           <div className="flex items-center">
             <div
-              className="shrink-0 touch-none px-2 py-3"
+              className="shrink-0 touch-none px-2 py-3 cursor-grab active:cursor-grabbing"
               style={{ color: "var(--ios-gray)" }}
-              onTouchStart={() => setDragging(index)}
-              onTouchMove={(e) => {
-                const y = e.touches[0].clientY;
-                for (let i = 0; i < itemRefs.current.length; i++) {
-                  const el = itemRefs.current[i];
-                  if (!el) continue;
-                  const r = el.getBoundingClientRect();
-                  if (y >= r.top && y <= r.bottom) { setDragOverIndex(i); return; }
-                }
-              }}
-              onTouchEnd={() => {
-                if (dragging !== null && dragOverIndex !== null && dragging !== dragOverIndex) onReorder(dragging, dragOverIndex);
-                setDragging(null); setDragOverIndex(null);
-              }}
+              onTouchStart={(e) => { e.stopPropagation(); handleTouchStart(index, e.touches[0].clientY); }}
+              onTouchMove={(e) => { e.stopPropagation(); e.preventDefault(); handleTouchMove(e.touches[0].clientY); }}
+              onTouchEnd={(e) => { e.stopPropagation(); handleTouchEnd(); }}
             >
-              <GripVertical className="h-4 w-4" />
+              <GripVertical className="h-5 w-5" />
             </div>
-            <div className="flex-1">
-              <RecipeRow recipe={recipe} isFav={true} showSeparator={index < recipes.length - 1}
+            <div className="flex-1 min-w-0">
+              <RecipeRow recipe={recipe} isFav={true} showSeparator={index < recipes.length - 1 && dragIndex === null}
                 onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
             </div>
           </div>
         </div>
       ))}
-    </>
+    </div>
   );
 }
 
