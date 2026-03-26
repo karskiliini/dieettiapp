@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ViikkoNavigaatio } from "@/components/navigaatio/viikko-navigaatio";
 import { AteriamaaraValitsin } from "@/components/navigaatio/ateriamaara-valitsin";
@@ -42,72 +41,59 @@ export function ViikkoNakymaInline({
 
   return (
     <div className="flex h-full flex-col gap-3">
-      {!jiggleMode && (
-        <div className="flex shrink-0 items-center justify-between">
-          <ViikkoNavigaatio />
-          <AteriamaaraValitsin />
-        </div>
-      )}
+      <div className="flex shrink-0 items-center justify-between">
+        <ViikkoNavigaatio />
+        <AteriamaaraValitsin />
+      </div>
       {jiggleMode && (
         <p className="shrink-0 text-center text-xs text-muted-foreground animate-pulse">
           {t("picker.tapToSwap", locale)}
         </p>
       )}
-      <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2 scrollbar-none">
+      <div className="flex-1 overflow-y-auto space-y-1">
         {dayGroups.map((day) => {
-          const totalCalories = day.meals.reduce(
-            (sum, m) => sum + m.recipe.calories,
-            0
-          );
+          const totalCal = day.meals.reduce((s, m) => s + m.recipe.calories, 0);
           return (
-            <Card
-              key={day.dayOfWeek}
-              className="flex min-w-[180px] shrink-0 flex-col"
-            >
-              <CardHeader className="shrink-0 pb-2">
-                <CardTitle
-                  className="cursor-pointer text-sm font-semibold hover:underline"
-                  onClick={() => onDayClick(day.dayOfWeek)}
-                >
-                  {dayName(day.dayOfWeek, locale)}{" "}
-                  <span className="font-normal text-muted-foreground">
+            <div key={day.dayOfWeek} className="rounded-lg border border-border bg-card">
+              {/* Day header */}
+              <button
+                className="flex w-full items-center justify-between px-3 py-2 text-left"
+                onClick={() => onDayClick(day.dayOfWeek)}
+              >
+                <div>
+                  <span className="text-sm font-semibold">
+                    {dayName(day.dayOfWeek, locale)}
+                  </span>
+                  <span className="ml-2 text-xs text-muted-foreground">
                     {getDateForWeekDay(weekNumber, year, day.dayOfWeek)}
                   </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col justify-between pb-3">
-                <div className="space-y-1">
-                  {visibleMeals.map((type) => {
-                    const meal = day.meals.find((m) => m.mealType === type);
-                    if (!meal) return null;
-                    return (
-                      <MealButton
-                        key={type}
-                        mealType={type}
-                        mealLabel={mealLabel(type, locale)}
-                        recipeName={meal.recipe.name}
-                        calories={meal.recipe.calories}
-                        jiggling={jiggleMode}
-                        onLongPress={() => setJiggleMode(true)}
-                        onClick={() =>
-                          onRecipeClick(
-                            meal.recipe.id,
-                            day.dayOfWeek,
-                            type
-                          )
-                        }
-                      />
-                    );
-                  })}
                 </div>
-                <div className="mt-2">
-                  <Separator />
-                  <div className="px-2 pt-2 text-right font-mono text-xs text-muted-foreground">
-                    {t("week.total", locale)} {totalCalories} kcal
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {totalCal} kcal
+                </span>
+              </button>
+              {/* Meals row */}
+              <div className="flex gap-px border-t border-border">
+                {visibleMeals.map((type) => {
+                  const meal = day.meals.find((m) => m.mealType === type);
+                  if (!meal) return null;
+                  return (
+                    <MealCell
+                      key={type}
+                      mealType={type}
+                      mealLabelText={mealLabel(type, locale)}
+                      recipeName={meal.recipe.name}
+                      calories={meal.recipe.calories}
+                      jiggling={jiggleMode}
+                      onLongPress={() => setJiggleMode(true)}
+                      onClick={() =>
+                        onRecipeClick(meal.recipe.id, day.dayOfWeek, type)
+                      }
+                    />
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </div>
@@ -115,8 +101,8 @@ export function ViikkoNakymaInline({
   );
 }
 
-function MealButton({
-  mealLabel: label,
+function MealCell({
+  mealLabelText,
   recipeName,
   calories,
   jiggling,
@@ -124,7 +110,7 @@ function MealButton({
   onClick,
 }: {
   mealType: MealType;
-  mealLabel: string;
+  mealLabelText: string;
   recipeName: string;
   calories: number;
   jiggling: boolean;
@@ -139,7 +125,6 @@ function MealButton({
     timerRef.current = setTimeout(() => {
       didLongPress.current = true;
       onLongPress();
-      // Haptic feedback if available
       if (navigator.vibrate) navigator.vibrate(30);
     }, 500);
   }, [onLongPress]);
@@ -149,9 +134,7 @@ function MealButton({
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    if (!didLongPress.current) {
-      onClick();
-    }
+    if (!didLongPress.current) onClick();
   }, [onClick]);
 
   const handleTouchMove = useCallback(() => {
@@ -165,8 +148,8 @@ function MealButton({
     <div
       data-meal
       className={cn(
-        "block w-full rounded-md p-2 text-left text-sm transition-colors hover:bg-accent cursor-pointer select-none",
-        jiggling && "animate-jiggle ring-1 ring-primary/30 bg-accent/30"
+        "flex-1 min-w-0 px-2 py-1.5 text-left cursor-pointer select-none transition-colors hover:bg-accent/50",
+        jiggling && "animate-jiggle bg-accent/30"
       )}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -175,13 +158,9 @@ function MealButton({
       onMouseUp={handleTouchEnd}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <span className="text-xs text-muted-foreground">
-        {label}
-      </span>
-      <p className="truncate font-medium">{recipeName}</p>
-      <span className="font-mono text-xs text-muted-foreground">
-        {calories} kcal
-      </span>
+      <p className="text-[10px] text-muted-foreground">{mealLabelText}</p>
+      <p className="truncate text-xs font-medium">{recipeName}</p>
+      <p className="font-mono text-[10px] text-muted-foreground">{calories}</p>
     </div>
   );
 }
