@@ -6,8 +6,9 @@ import { useAppState } from "@/lib/app-state";
 import { useFavorites } from "@/lib/favorites";
 import type { MealType } from "@/lib/constants";
 import { t, mealLabel, proteinLabel } from "@/lib/i18n";
-import { Star, GripVertical, ChevronLeft, Clock } from "lucide-react";
+import { Star, GripVertical, ChevronLeft, Clock, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ReseptiModal } from "./resepti-modal";
 
 const PROTEIN_TABS: ProteinSource[] = ["kana", "nauta", "porsas", "kala", "muu"];
 
@@ -22,6 +23,7 @@ export function ReseptiValitsin({ mealType, dayOfWeek, onSelect, onCancel }: Pro
   const { dietti, locale } = useAppState();
   const { favorites, isFavorite, toggleFavorite, reorderFavorites } = useFavorites();
   const [activeTab, setActiveTab] = useState<ProteinSource | "all">("all");
+  const [peekRecipeId, setPeekRecipeId] = useState<number | null>(null);
 
   const dietRecipes = RECIPES.filter((r) => r.dietCategory === dietti);
   const favRecipes = favorites.map((id) => dietRecipes.find((r) => r.id === id)).filter((r): r is Recipe => !!r);
@@ -76,7 +78,7 @@ export function ReseptiValitsin({ mealType, dayOfWeek, onSelect, onCancel }: Pro
             {t("picker.favorites", locale)}
           </p>
           <div className="rounded-[10px] overflow-hidden" style={{ background: "var(--ios-card)" }}>
-            <FavoritesList recipes={favRecipes} favorites={favorites} onSelect={onSelect} onToggleFavorite={toggleFavorite} onReorder={reorderFavorites} />
+            <FavoritesList recipes={favRecipes} favorites={favorites} onSelect={onSelect} onToggleFavorite={toggleFavorite} onReorder={reorderFavorites} onPeek={setPeekRecipeId} />
           </div>
           <p className="text-[13px] uppercase" style={{ color: "var(--ios-secondary-label)" }}>
             {t("picker.otherRecipes", locale)}
@@ -92,17 +94,23 @@ export function ReseptiValitsin({ mealType, dayOfWeek, onSelect, onCancel }: Pro
         ) : (
           filteredRecipes.map((recipe, i) => (
             <RecipeRow key={recipe.id} recipe={recipe} isFav={false} showSeparator={i < filteredRecipes.length - 1}
-              onSelect={onSelect} onToggleFavorite={toggleFavorite} />
+              onSelect={onSelect} onToggleFavorite={toggleFavorite} onPeek={setPeekRecipeId} />
           ))
         )}
       </div>
+
+      {/* Peek modal */}
+      {peekRecipeId !== null && (
+        <ReseptiModal recipeId={peekRecipeId} onClose={() => setPeekRecipeId(null)} />
+      )}
     </div>
   );
 }
 
-function FavoritesList({ recipes, favorites, onSelect, onToggleFavorite, onReorder }: {
+function FavoritesList({ recipes, favorites, onSelect, onToggleFavorite, onReorder, onPeek }: {
   recipes: Recipe[]; favorites: number[]; onSelect: (id: number) => void;
   onToggleFavorite: (id: number) => void; onReorder: (from: number, to: number) => void;
+  onPeek: (id: number) => void;
 }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -203,7 +211,7 @@ function FavoritesList({ recipes, favorites, onSelect, onToggleFavorite, onReord
             </div>
             <div className="flex-1 min-w-0">
               <RecipeRow recipe={recipe} isFav={true} showSeparator={index < recipes.length - 1 && dragIndex === null}
-                onSelect={onSelect} onToggleFavorite={onToggleFavorite} />
+                onSelect={onSelect} onToggleFavorite={onToggleFavorite} onPeek={onPeek} />
             </div>
           </div>
         </div>
@@ -212,21 +220,49 @@ function FavoritesList({ recipes, favorites, onSelect, onToggleFavorite, onReord
   );
 }
 
-function RecipeRow({ recipe, isFav, showSeparator, onSelect, onToggleFavorite }: {
+function RecipeRow({ recipe, isFav, showSeparator, onSelect, onToggleFavorite, onPeek }: {
   recipe: Recipe; isFav: boolean; showSeparator: boolean;
   onSelect: (id: number) => void; onToggleFavorite: (id: number) => void;
+  onPeek?: (id: number) => void;
 }) {
   const totalTime = recipe.prepTimeMinutes + recipe.cookTimeMinutes;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+  const didMove = useRef(false);
+
+  function handleTouchStart() {
+    didLongPress.current = false;
+    didMove.current = false;
+    timerRef.current = setTimeout(() => {
+      didLongPress.current = true;
+      onPeek?.(recipe.id);
+      if (navigator.vibrate) navigator.vibrate(10);
+    }, 400);
+  }
+  function handleTouchMove() {
+    didMove.current = true;
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+  }
+  function handleTouchEnd() {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (!didLongPress.current && !didMove.current) onSelect(recipe.id);
+  }
+
   return (
     <div
-      className="flex items-center ios-row"
+      className="flex items-center ios-row select-none"
       style={{ borderBottom: showSeparator ? "0.5px solid var(--ios-separator)" : "none" }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onContextMenu={(e) => e.preventDefault()}
     >
-      <button className="shrink-0 p-3" onClick={(e) => { e.stopPropagation(); onToggleFavorite(recipe.id); }}>
+      <button className="shrink-0 p-3" onClick={(e) => { e.stopPropagation(); onToggleFavorite(recipe.id); }}
+        onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
         <Star className={cn("h-4 w-4", isFav ? "fill-yellow-400 text-yellow-400" : "")}
           style={isFav ? {} : { color: "var(--ios-gray)" }} />
       </button>
-      <button onClick={() => onSelect(recipe.id)} className="flex flex-1 items-center justify-between pr-4 py-[10px] text-left min-w-0">
+      <div className="flex flex-1 items-center justify-between pr-4 py-[10px] min-w-0">
         <div className="min-w-0 flex-1">
           <p className="text-[15px] truncate">{recipe.name}</p>
           <p className="text-[13px] truncate" style={{ color: "var(--ios-secondary-label)" }}>{recipe.description}</p>
@@ -237,7 +273,7 @@ function RecipeRow({ recipe, isFav, showSeparator, onSelect, onToggleFavorite }:
             <Clock className="h-2.5 w-2.5" />{totalTime}min
           </div>
         </div>
-      </button>
+      </div>
     </div>
   );
 }

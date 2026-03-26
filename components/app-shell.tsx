@@ -113,7 +113,8 @@ function AppContent() {
     if (v.type === "viikko") return (
       <ViikkoNakymaInline mealPlan={mealPlan} mealCount={mealCount}
         onDayClick={(day) => goTo({ type: "paiva", dayOfWeek: day })}
-        onRecipeClick={(id) => goTo({ type: "resepti", recipeId: id })} />
+        onRecipeClick={(id) => goTo({ type: "resepti", recipeId: id })}
+        onSwapMeal={(day, mt) => goTo({ type: "valitse-resepti", dayOfWeek: day, mealType: mt })} />
     );
     if (v.type === "paiva") return (
       <PaivaNakyma dayOfWeek={v.dayOfWeek}
