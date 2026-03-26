@@ -199,7 +199,12 @@ function AppContent() {
     if (v.type === "resepti") {
       const recipe = RECIPES.find((r) => r.id === v.recipeId);
       if (!recipe) return <p style={{ color: "var(--ios-secondary-label)" }}>{t("error.notFound", locale)}</p>;
-      return <><ReseptiNakyma recipe={recipe} /><div className="h-4" /><Ostoslista ingredients={recipe.ingredients} recipeName={recipe.name} /></>;
+      return (
+        <div className="space-y-4 pb-8">
+          <ReseptiNakyma recipe={recipe} />
+          <Ostoslista ingredients={recipe.ingredients} recipeName={recipe.name} />
+        </div>
+      );
     }
     if (v.type === "valitse-resepti") return (
       <ReseptiValitsin mealType={v.mealType} dayOfWeek={v.dayOfWeek}
@@ -218,9 +223,10 @@ function AppContent() {
     return (
       <div className={`absolute inset-0 flex flex-col ${className || ""}`} style={{ background: "var(--background)", ...style }}>
         {renderHeader(v, isBack)}
-        <div className="flex-1 overflow-auto" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        <div className="flex-1 overflow-auto"
           onClick={isBack ? undefined : handleBackgroundClick}>
-          <div className="mx-auto flex h-full max-w-lg flex-col px-4 py-3">
+          <div className="mx-auto flex h-full max-w-lg flex-col px-4 pt-3"
+            style={{ paddingBottom: "calc(12px + env(safe-area-inset-bottom))" }}>
             {renderContent(v)}
           </div>
         </div>

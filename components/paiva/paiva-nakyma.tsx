@@ -59,7 +59,7 @@ export function PaivaNakyma({ dayOfWeek, meals, mealCount, onRecipeClick, onLogC
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-8">
       <h2 className="text-[22px] font-bold">
         {dayName(dayOfWeek, locale)}{" "}
         <span className="text-[15px] font-normal" style={{ color: "var(--ios-secondary-label)" }}>
