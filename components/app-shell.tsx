@@ -13,14 +13,16 @@ import { ReseptiNakyma } from "./resepti/resepti-nakyma";
 import { ReseptiValitsin } from "./resepti/resepti-valitsin";
 import { Ostoslista } from "./resepti/ostoslista";
 import { AsetuksetNakyma } from "./asetukset/asetukset-nakyma";
+import { FoodLogger } from "./tracking/food-logger";
+import { useMealTracker } from "@/lib/meal-tracker";
 import { ChevronLeft, Settings } from "lucide-react";
-import { Separator } from "./ui/separator";
 
 type View =
   | { type: "viikko" }
   | { type: "paiva"; dayOfWeek: number }
   | { type: "resepti"; recipeId: number }
   | { type: "valitse-resepti"; dayOfWeek: number; mealType: MealType }
+  | { type: "log-food"; dayOfWeek: number; mealType: MealType }
   | { type: "asetukset" };
 
 function AppContent() {
@@ -28,6 +30,7 @@ function AppContent() {
     locale, dietti, weekNumber, year, mealCount,
     jiggleMode, setJiggleMode, overrideMeal, getOverride,
   } = useAppState();
+  const tracker = useMealTracker(weekNumber, year);
   const [view, setView] = useState<View>({ type: "viikko" });
   const [history, setHistory] = useState<View[]>([]);
   const [slideDir, setSlideDir] = useState<"in" | "out" | null>(null);
@@ -144,7 +147,8 @@ function AppContent() {
       <PaivaNakyma dayOfWeek={v.dayOfWeek}
         meals={mealPlan.filter((m)=>m.dayOfWeek===v.dayOfWeek) as any}
         mealCount={mealCount}
-        onRecipeClick={(id,mt) => handleMealClick(id,v.dayOfWeek,mt)} />
+        onRecipeClick={(id,mt) => handleMealClick(id,v.dayOfWeek,mt)}
+        onLogCustom={(day,mt) => goTo({type:"log-food",dayOfWeek:day,mealType:mt})} />
     );
     if (v.type === "resepti") {
       const recipe = RECIPES.find((r)=>r.id===v.recipeId);
@@ -155,6 +159,15 @@ function AppContent() {
       <ReseptiValitsin mealType={v.mealType} dayOfWeek={v.dayOfWeek}
         onCancel={goBackAnimated}
         onSelect={(id) => { overrideMeal(v.dayOfWeek,v.mealType,id); goBackAnimated(); }} />
+    );
+    if (v.type === "log-food") return (
+      <FoodLogger
+        onCancel={goBackAnimated}
+        onSave={(foods) => {
+          tracker.setStatus(v.dayOfWeek, v.mealType, { status: "custom", foods });
+          goBackAnimated();
+        }}
+      />
     );
     if (v.type === "asetukset") return <AsetuksetNakyma />;
     return null;

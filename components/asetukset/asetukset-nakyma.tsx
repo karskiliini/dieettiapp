@@ -3,6 +3,7 @@
 import { useAppState } from "@/lib/app-state";
 import { t, type Locale } from "@/lib/i18n";
 import { Check } from "lucide-react";
+import { Muistutukset } from "./muistutukset";
 
 const LANGUAGES: { code: Locale; flag: string; labelKey: "settings.finnish" | "settings.english" }[] = [
   { code: "fi", flag: "🇫🇮", labelKey: "settings.finnish" },
@@ -41,6 +42,7 @@ export function AsetuksetNakyma() {
           ))}
         </div>
       </div>
+      <Muistutukset />
     </div>
   );
 }
