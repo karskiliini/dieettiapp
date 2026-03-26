@@ -24,14 +24,12 @@ interface AppState {
   weekNumber: number;
   year: number;
   mealCount: number;
-  jiggleMode: boolean;
   setLocale: (l: Locale) => void;
   setDietti: (d: DietCategory) => void;
   setWeek: (week: number, year: number) => void;
   setMealCount: (n: number) => void;
   nextWeek: () => void;
   prevWeek: () => void;
-  setJiggleMode: (on: boolean) => void;
   overrideMeal: (dayOfWeek: number, mealType: MealType, recipeId: number) => void;
   getOverride: (dayOfWeek: number, mealType: MealType) => number | undefined;
 }
@@ -44,40 +42,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [weekNumber, setWeekNumber] = useState(getWeekNumber());
   const [year, setYear] = useState(getCurrentYear());
   const [mealCount, setMealCount] = useState(3);
-  const [jiggleMode, setJiggleMode] = useState(false);
   const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
 
-  useEffect(() => {
-    setLocaleState(loadLocale());
-  }, []);
+  useEffect(() => { setLocaleState(loadLocale()); }, []);
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
     try { localStorage.setItem("myplate-locale", l); } catch {}
   }, []);
 
-  function setWeek(w: number, y: number) {
-    setWeekNumber(w);
-    setYear(y);
-  }
-
-  function nextWeek() {
-    if (weekNumber >= 52) {
-      setWeekNumber(1);
-      setYear(year + 1);
-    } else {
-      setWeekNumber(weekNumber + 1);
-    }
-  }
-
-  function prevWeek() {
-    if (weekNumber <= 1) {
-      setWeekNumber(52);
-      setYear(year - 1);
-    } else {
-      setWeekNumber(weekNumber - 1);
-    }
-  }
+  function setWeek(w: number, y: number) { setWeekNumber(w); setYear(y); }
+  function nextWeek() { if (weekNumber >= 52) { setWeekNumber(1); setYear(year + 1); } else { setWeekNumber(weekNumber + 1); } }
+  function prevWeek() { if (weekNumber <= 1) { setWeekNumber(52); setYear(year - 1); } else { setWeekNumber(weekNumber - 1); } }
 
   const overrideMeal = useCallback(
     (dayOfWeek: number, mealType: MealType, recipeId: number) => {
@@ -98,25 +74,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <AppContext.Provider
-      value={{
-        locale,
-        dietti,
-        weekNumber,
-        year,
-        mealCount,
-        jiggleMode,
-        setLocale,
-        setDietti,
-        setWeek,
-        setMealCount,
-        nextWeek,
-        prevWeek,
-        setJiggleMode,
-        overrideMeal,
-        getOverride,
-      }}
-    >
+    <AppContext.Provider value={{
+      locale, dietti, weekNumber, year, mealCount,
+      setLocale, setDietti, setWeek, setMealCount, nextWeek, prevWeek,
+      overrideMeal, getOverride,
+    }}>
       {children}
     </AppContext.Provider>
   );

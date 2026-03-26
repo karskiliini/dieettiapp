@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef } from "react";
-import { ChevronRight, Clock } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronRight, Clock, ArrowLeftRight } from "lucide-react";
 import { MEALS_BY_COUNT, type MealType } from "@/lib/constants";
 import { useAppState } from "@/lib/app-state";
 import { cn, getDateForWeekDay } from "@/lib/utils";
@@ -25,36 +25,27 @@ interface PaivaNakymaProps {
   dayOfWeek: number;
   meals: MealEntry[];
   mealCount: number;
-  onRecipeClick?: (id: number, mealType?: MealType) => void;
+  onRecipeClick?: (id: number) => void;
+  onSwapMeal?: (dayOfWeek: number, mealType: MealType) => void;
   onLogCustom?: (dayOfWeek: number, mealType: MealType) => void;
 }
 
-export function PaivaNakyma({ dayOfWeek, meals, mealCount, onRecipeClick, onLogCustom }: PaivaNakymaProps) {
-  const { weekNumber, year, jiggleMode, setJiggleMode, locale } = useAppState();
+export function PaivaNakyma({ dayOfWeek, meals, mealCount, onRecipeClick, onSwapMeal, onLogCustom }: PaivaNakymaProps) {
+  const { weekNumber, year, locale } = useAppState();
   const tracker = useMealTracker(weekNumber, year);
   const visibleMeals = MEALS_BY_COUNT[mealCount] || MEALS_BY_COUNT[3];
 
-  // Calculate totals based on actual status
   let totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
   for (const meal of meals) {
     const s = tracker.getStatus(dayOfWeek, meal.mealType);
     if (s.status === "eaten") {
-      totalCalories += meal.recipe.calories;
-      totalProtein += meal.recipe.proteinGrams;
-      totalCarbs += meal.recipe.carbsGrams;
-      totalFat += meal.recipe.fatGrams;
+      totalCalories += meal.recipe.calories; totalProtein += meal.recipe.proteinGrams;
+      totalCarbs += meal.recipe.carbsGrams; totalFat += meal.recipe.fatGrams;
     } else if (s.status === "custom") {
-      for (const f of s.foods) {
-        totalCalories += f.calories;
-        totalProtein += f.protein;
-        totalCarbs += f.carbs;
-        totalFat += f.fat;
-      }
+      for (const f of s.foods) { totalCalories += f.calories; totalProtein += f.protein; totalCarbs += f.carbs; totalFat += f.fat; }
     } else if (s.status === "planned") {
-      totalCalories += meal.recipe.calories;
-      totalProtein += meal.recipe.proteinGrams;
-      totalCarbs += meal.recipe.carbsGrams;
-      totalFat += meal.recipe.fatGrams;
+      totalCalories += meal.recipe.calories; totalProtein += meal.recipe.proteinGrams;
+      totalCarbs += meal.recipe.carbsGrams; totalFat += meal.recipe.fatGrams;
     }
   }
 
@@ -67,12 +58,6 @@ export function PaivaNakyma({ dayOfWeek, meals, mealCount, onRecipeClick, onLogC
         </span>
       </h2>
 
-      {jiggleMode && (
-        <p className="text-center text-[13px] animate-pulse" style={{ color: "var(--ios-secondary-label)" }}>
-          {t("picker.tapToSwap", locale)}
-        </p>
-      )}
-
       <div className="space-y-3">
         {visibleMeals.map((type) => {
           const meal = meals.find((m) => m.mealType === type);
@@ -81,27 +66,25 @@ export function PaivaNakyma({ dayOfWeek, meals, mealCount, onRecipeClick, onLogC
           const totalTime = meal.recipe.prepTimeMinutes + meal.recipe.cookTimeMinutes;
           return (
             <div key={type}>
-              <DayMealRow
+              <SwipeableMealRow
                 mealType={type}
                 label={mealLabel(type, locale)}
                 recipe={meal.recipe}
                 totalTime={totalTime}
                 status={status}
-                jiggling={jiggleMode}
-                onLongPress={() => setJiggleMode(true)}
-                onClick={() => onRecipeClick?.(meal.recipe.id, type)}
+                swapLabel={locale === "fi" ? "Vaihda" : "Swap"}
+                onClick={() => onRecipeClick?.(meal.recipe.id)}
+                onSwap={() => onSwapMeal?.(dayOfWeek, type)}
               />
-              {!jiggleMode && (
-                <div className="px-2 py-2">
-                  <MealActions
-                    status={status}
-                    onEaten={() => tracker.setStatus(dayOfWeek, type, { status: "eaten" })}
-                    onSkipped={() => tracker.setStatus(dayOfWeek, type, { status: "skipped" })}
-                    onCustom={() => onLogCustom?.(dayOfWeek, type)}
-                    onReset={() => tracker.setStatus(dayOfWeek, type, { status: "planned" })}
-                  />
-                </div>
-              )}
+              <div className="px-2 py-2">
+                <MealActions
+                  status={status}
+                  onEaten={() => tracker.setStatus(dayOfWeek, type, { status: "eaten" })}
+                  onSkipped={() => tracker.setStatus(dayOfWeek, type, { status: "skipped" })}
+                  onCustom={() => onLogCustom?.(dayOfWeek, type)}
+                  onReset={() => tracker.setStatus(dayOfWeek, type, { status: "planned" })}
+                />
+              </div>
             </div>
           );
         })}
@@ -130,10 +113,7 @@ export function PaivaNakyma({ dayOfWeek, meals, mealCount, onRecipeClick, onLogC
       <PaivaOstoslista
         meals={meals.map((m) => ({
           mealType: m.mealType,
-          recipe: {
-            name: m.recipe.name,
-            ingredients: RECIPES.find((r) => r.id === m.recipe.id)?.ingredients || [],
-          },
+          recipe: { name: m.recipe.name, ingredients: RECIPES.find((r) => r.id === m.recipe.id)?.ingredients || [] },
         }))}
         dayName={`${dayName(dayOfWeek, locale)} ${getDateForWeekDay(weekNumber, year, dayOfWeek)}`}
       />
@@ -141,69 +121,137 @@ export function PaivaNakyma({ dayOfWeek, meals, mealCount, onRecipeClick, onLogC
   );
 }
 
-function DayMealRow({
-  label, recipe, totalTime, status, jiggling, onLongPress, onClick,
+// Swipeable meal row: swipe left reveals "Vaihda" button
+function SwipeableMealRow({
+  label, recipe, totalTime, status, swapLabel, onClick, onSwap,
 }: {
   mealType: MealType; label: string;
   recipe: { name: string; calories: number; proteinGrams: number; carbsGrams: number; fatGrams: number };
-  totalTime: number; status: MealStatus; jiggling: boolean;
-  onLongPress: () => void; onClick: () => void;
+  totalTime: number; status: MealStatus; swapLabel: string;
+  onClick: () => void; onSwap: () => void;
 }) {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const didLongPress = useRef(false);
+  const [offsetX, setOffsetX] = useState(0);
+  const [isRevealed, setIsRevealed] = useState(false);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const locked = useRef<"h" | "v" | null>(null);
   const didMove = useRef(false);
-  const isConsumed = status.status === "eaten" || status.status === "custom";
+  const BUTTON_WIDTH = 80;
+
   const isSkipped = status.status === "skipped";
 
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    locked.current = null;
+    didMove.current = false;
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!touchStart.current) return;
+    const dx = e.touches[0].clientX - touchStart.current.x;
+    const dy = e.touches[0].clientY - touchStart.current.y;
+
+    if (locked.current === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      locked.current = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+    }
+    if (locked.current !== "h") return;
+
+    didMove.current = true;
+    e.preventDefault();
+
+    const base = isRevealed ? -BUTTON_WIDTH : 0;
+    const raw = base + dx;
+    // Clamp: can't swipe right past 0, rubber band past button width
+    const clamped = Math.min(0, raw < -BUTTON_WIDTH ? -BUTTON_WIDTH + (raw + BUTTON_WIDTH) * 0.3 : raw);
+    setOffsetX(clamped);
+  }
+
+  function handleTouchEnd() {
+    if (!didMove.current && !isRevealed) {
+      touchStart.current = null;
+      onClick();
+      return;
+    }
+    if (!didMove.current && isRevealed) {
+      // Tap while revealed → close
+      setOffsetX(0);
+      setIsRevealed(false);
+      touchStart.current = null;
+      return;
+    }
+
+    // Decide: reveal or close
+    if (offsetX < -BUTTON_WIDTH / 2) {
+      setOffsetX(-BUTTON_WIDTH);
+      setIsRevealed(true);
+    } else {
+      setOffsetX(0);
+      setIsRevealed(false);
+    }
+    touchStart.current = null;
+  }
+
+  const transition = didMove.current && locked.current === "h" ? "none" : "transform 0.25s ease-out";
+
   return (
-    <div
-      data-meal
-      className={cn("rounded-[10px] cursor-pointer select-none", jiggling && "animate-jiggle")}
-      style={{
-        background: "var(--ios-card)",
-        opacity: isSkipped ? 0.4 : 1,
-      }}
-      onTouchStart={() => {
-        didLongPress.current = false; didMove.current = false;
-        timerRef.current = setTimeout(() => { didLongPress.current = true; onLongPress(); if(navigator.vibrate) navigator.vibrate(30); }, 500);
-      }}
-      onTouchEnd={() => {
-        if(timerRef.current){clearTimeout(timerRef.current);timerRef.current=null;}
-        if(!didLongPress.current && !didMove.current) onClick();
-      }}
-      onTouchMove={() => { didMove.current=true; if(timerRef.current){clearTimeout(timerRef.current);timerRef.current=null;} }}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-[11px] font-semibold" style={{ color: "var(--ios-blue)" }}>{label}</p>
-            <MealStatusBadge status={status} />
-          </div>
-          <p className={cn("text-[17px] truncate", isSkipped && "line-through")}>{recipe.name}</p>
-          {status.status === "custom" && (
-            <p className="text-[13px]" style={{ color: "var(--ios-blue)" }}>
-              {status.foods.map((f) => `${f.name} ${f.grams}g`).join(", ")}
-            </p>
-          )}
-          <div className="flex items-center gap-3 mt-0.5">
-            <span className="text-[13px] font-mono font-semibold">
-              {status.status === "custom"
-                ? `${status.foods.reduce((s, f) => s + f.calories, 0)} kcal`
-                : `${recipe.calories} kcal`}
-            </span>
-            {status.status !== "custom" && (
-              <span className="text-[11px]" style={{ color: "var(--ios-secondary-label)" }}>
-                P {recipe.proteinGrams}g · HH {recipe.carbsGrams}g · R {recipe.fatGrams}g
-              </span>
-            )}
-          </div>
+    <div className="relative rounded-[10px] overflow-hidden" style={{ background: "var(--ios-card)" }}>
+      {/* Swap button behind */}
+      <div
+        className="absolute right-0 top-0 bottom-0 flex items-center justify-center cursor-pointer"
+        style={{ width: BUTTON_WIDTH, background: "var(--ios-blue)" }}
+        onClick={() => { setOffsetX(0); setIsRevealed(false); onSwap(); }}
+      >
+        <div className="flex flex-col items-center gap-0.5">
+          <ArrowLeftRight className="h-5 w-5 text-white" />
+          <span className="text-[11px] font-medium text-white">{swapLabel}</span>
         </div>
-        <div className="flex items-center gap-1 ml-2 shrink-0">
-          <div className="flex items-center gap-0.5 text-[11px]" style={{ color: "var(--ios-secondary-label)" }}>
-            <Clock className="h-3 w-3" />{totalTime}
+      </div>
+
+      {/* Foreground card */}
+      <div
+        data-meal
+        className="relative cursor-pointer select-none"
+        style={{
+          transform: `translateX(${offsetX}px)`,
+          transition,
+          background: "var(--ios-card)",
+          opacity: isSkipped ? 0.4 : 1,
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-semibold" style={{ color: "var(--ios-blue)" }}>{label}</p>
+              <MealStatusBadge status={status} />
+            </div>
+            <p className={cn("text-[17px] truncate", isSkipped && "line-through")}>{recipe.name}</p>
+            {status.status === "custom" && (
+              <p className="text-[13px]" style={{ color: "var(--ios-blue)" }}>
+                {status.foods.map((f) => `${f.name} ${f.grams}g`).join(", ")}
+              </p>
+            )}
+            <div className="flex items-center gap-3 mt-0.5">
+              <span className="text-[13px] font-mono font-semibold">
+                {status.status === "custom"
+                  ? `${status.foods.reduce((s, f) => s + f.calories, 0)} kcal`
+                  : `${recipe.calories} kcal`}
+              </span>
+              {status.status !== "custom" && (
+                <span className="text-[11px]" style={{ color: "var(--ios-secondary-label)" }}>
+                  P {recipe.proteinGrams}g · HH {recipe.carbsGrams}g · R {recipe.fatGrams}g
+                </span>
+              )}
+            </div>
           </div>
-          {!jiggling && <ChevronRight className="h-4 w-4 ml-1" style={{ color: "var(--ios-gray3)" }} />}
+          <div className="flex items-center gap-1 ml-2 shrink-0">
+            <div className="flex items-center gap-0.5 text-[11px]" style={{ color: "var(--ios-secondary-label)" }}>
+              <Clock className="h-3 w-3" />{totalTime}
+            </div>
+            <ChevronRight className="h-4 w-4 ml-1" style={{ color: "var(--ios-gray3)" }} />
+          </div>
         </div>
       </div>
     </div>
