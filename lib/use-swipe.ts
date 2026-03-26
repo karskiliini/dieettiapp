@@ -2,71 +2,102 @@
 
 import { useRef, useState, useCallback, type TouchEvent } from "react";
 
-interface SwipeHandlers {
-  onSwipeLeft?: () => void;
-  onSwipeRight?: () => void;
+interface SwipeConfig {
+  canSwipeBack: boolean;
+  onSwipeBack: () => void;
 }
 
-export function useSwipe({ onSwipeLeft, onSwipeRight }: SwipeHandlers) {
+export function useSwipeBack({ canSwipeBack, onSwipeBack }: SwipeConfig) {
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const locked = useRef<"horizontal" | "vertical" | null>(null);
+  const screenWidth = useRef(typeof window !== "undefined" ? window.innerWidth : 375);
 
-  const onTouchStart = useCallback((e: TouchEvent) => {
-    touchStart.current = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-    };
-    locked.current = null;
-    setIsDragging(false);
-    setDragX(0);
-  }, []);
+  const onTouchStart = useCallback(
+    (e: TouchEvent) => {
+      if (!canSwipeBack) return;
+      // Only start from left 40px edge (like iOS)
+      if (e.touches[0].clientX > 40) return;
+      touchStart.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+      locked.current = null;
+      setIsDragging(false);
+      setDragX(0);
+      screenWidth.current = window.innerWidth;
+    },
+    [canSwipeBack]
+  );
 
   const onTouchMove = useCallback(
     (e: TouchEvent) => {
-      if (!touchStart.current) return;
+      if (!touchStart.current || !canSwipeBack) return;
 
       const dx = e.touches[0].clientX - touchStart.current.x;
       const dy = e.touches[0].clientY - touchStart.current.y;
 
-      // Lock direction after 10px movement
       if (locked.current === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
         locked.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
       }
 
       if (locked.current !== "horizontal") return;
+      if (dx <= 0) return;
 
-      // Only track rightward drag (back gesture) when onSwipeRight exists
-      if (onSwipeRight && dx > 0) {
-        setIsDragging(true);
-        setDragX(dx);
-      }
+      e.preventDefault();
+      setIsDragging(true);
+      setDragX(dx);
     },
-    [onSwipeRight]
+    [canSwipeBack]
   );
 
   const onTouchEnd = useCallback(
     (e: TouchEvent) => {
-      if (!touchStart.current) return;
+      if (!touchStart.current || !isDragging) {
+        touchStart.current = null;
+        locked.current = null;
+        return;
+      }
 
-      const deltaX = e.changedTouches[0].clientX - touchStart.current.x;
+      const dx = e.changedTouches[0].clientX - touchStart.current.x;
+      const threshold = screenWidth.current * 0.5;
 
-      if (locked.current === "horizontal" && Math.abs(deltaX) > 80) {
-        if (deltaX > 0 && onSwipeRight) {
-          onSwipeRight();
-        } else if (deltaX < 0 && onSwipeLeft) {
-          onSwipeLeft();
-        }
+      if (dx > threshold) {
+        // Auto-complete the swipe
+        setIsCompleting(true);
+        setDragX(screenWidth.current);
+        setTimeout(() => {
+          onSwipeBack();
+          setIsDragging(false);
+          setIsCompleting(false);
+          setDragX(0);
+        }, 250);
+      } else {
+        // Snap back
+        setDragX(0);
+        setTimeout(() => {
+          setIsDragging(false);
+        }, 250);
       }
 
       touchStart.current = null;
       locked.current = null;
-      setIsDragging(false);
-      setDragX(0);
     },
-    [onSwipeLeft, onSwipeRight]
+    [isDragging, onSwipeBack]
   );
 
-  return { onTouchStart, onTouchMove, onTouchEnd, dragX, isDragging };
+  // Progress 0-1 of how far the swipe has gone
+  const progress = isDragging ? Math.min(dragX / screenWidth.current, 1) : 0;
+
+  return {
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
+    isDragging,
+    isCompleting,
+    dragX,
+    progress,
+  };
 }
