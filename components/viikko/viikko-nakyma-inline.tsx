@@ -1,13 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronRight, ArrowLeftRight } from "lucide-react";
+import { ChevronRight, ArrowLeftRight, ShoppingCart } from "lucide-react";
 import { MEALS_BY_COUNT, type MealType } from "@/lib/constants";
 import { useAppState } from "@/lib/app-state";
 import { getDateForWeekDay } from "@/lib/utils";
 import { dayName, mealLabel } from "@/lib/i18n";
 import { ViikkoNavigaatio } from "@/components/navigaatio/viikko-navigaatio";
 import { AteriamaaraValitsin } from "@/components/navigaatio/ateriamaara-valitsin";
+import { ViikkoOstoslista } from "./viikko-ostoslista";
 
 interface MealPlanEntry {
   dayOfWeek: number;
@@ -27,6 +28,7 @@ export function ViikkoNakymaInline({ mealPlan, mealCount, onDayClick, onRecipeCl
   const { weekNumber, year, locale } = useAppState();
   const visibleMeals = MEALS_BY_COUNT[mealCount] || MEALS_BY_COUNT[3];
   const swapLabel = locale === "fi" ? "Vaihda" : "Swap";
+  const [showShoppingList, setShowShoppingList] = useState(false);
   const dayGroups = Array.from({ length: 7 }, (_, i) => ({
     dayOfWeek: i,
     meals: mealPlan.filter((m) => m.dayOfWeek === i),
@@ -38,6 +40,16 @@ export function ViikkoNakymaInline({ mealPlan, mealCount, onDayClick, onRecipeCl
         <ViikkoNavigaatio />
         <AteriamaaraValitsin />
       </div>
+      {/* Weekly shopping list button */}
+      <button
+        onClick={() => setShowShoppingList(true)}
+        className="flex shrink-0 w-full items-center justify-center gap-2 rounded-[10px] py-[10px] text-[15px] font-medium"
+        style={{ background: "var(--ios-card)", color: "var(--ios-blue)" }}
+      >
+        <ShoppingCart className="h-4 w-4" />
+        {locale === "fi" ? "Viikon ostoslista" : "Weekly shopping list"}
+      </button>
+
       <div className="flex-1 overflow-y-auto -mx-4 px-4 space-y-3">
         {dayGroups.map((day) => {
           const totalCal = day.meals.reduce((s, m) => s + m.recipe.calories, 0);
@@ -81,6 +93,10 @@ export function ViikkoNakymaInline({ mealPlan, mealCount, onDayClick, onRecipeCl
         })}
         <div className="h-2" />
       </div>
+
+      {showShoppingList && (
+        <ViikkoOstoslista mealPlan={mealPlan} onClose={() => setShowShoppingList(false)} />
+      )}
     </div>
   );
 }
