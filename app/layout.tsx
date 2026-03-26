@@ -28,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="fi" className="h-full antialiased">
       <head>
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.svg" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
       <body className="min-h-full">{children}</body>
     </html>
