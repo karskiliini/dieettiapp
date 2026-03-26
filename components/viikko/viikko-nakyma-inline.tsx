@@ -119,9 +119,11 @@ function MealCell({
 }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
+  const didMove = useRef(false);
 
   const handleTouchStart = useCallback(() => {
     didLongPress.current = false;
+    didMove.current = false;
     timerRef.current = setTimeout(() => {
       didLongPress.current = true;
       onLongPress();
@@ -134,10 +136,11 @@ function MealCell({
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    if (!didLongPress.current) onClick();
+    if (!didLongPress.current && !didMove.current) onClick();
   }, [onClick]);
 
   const handleTouchMove = useCallback(() => {
+    didMove.current = true;
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;

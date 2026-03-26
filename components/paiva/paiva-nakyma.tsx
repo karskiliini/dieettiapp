@@ -145,9 +145,11 @@ function DayMealCard({
   const { locale } = useAppState();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
+  const didMove = useRef(false);
 
   const handleTouchStart = () => {
     didLongPress.current = false;
+    didMove.current = false;
     timerRef.current = setTimeout(() => {
       didLongPress.current = true;
       onLongPress();
@@ -160,12 +162,13 @@ function DayMealCard({
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    if (!didLongPress.current) {
+    if (!didLongPress.current && !didMove.current) {
       onClick();
     }
   };
 
   const handleTouchMove = () => {
+    didMove.current = true;
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
