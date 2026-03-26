@@ -1,5 +1,16 @@
 import type { DietCategory, MealType } from "./constants";
 import { getWeekNumber, getCurrentYear } from "./utils";
+import { KETO_RECIPES } from "./keto-recipes";
+
+export type ProteinSource = "kana" | "nauta" | "porsas" | "kala" | "muu";
+
+export const PROTEIN_LABELS: Record<ProteinSource, string> = {
+  kana: "Kana",
+  nauta: "Nauta",
+  porsas: "Porsas",
+  kala: "Kala",
+  muu: "Muu",
+};
 
 export interface Recipe {
   id: number;
@@ -7,6 +18,7 @@ export interface Recipe {
   description: string;
   dietCategory: DietCategory;
   mealType: MealType;
+  proteinSource?: ProteinSource;
   ingredients: { amount: number; unit: string; name: string }[];
   instructions: string[];
   prepTimeMinutes: number;
@@ -848,6 +860,7 @@ const allRecipes: Omit<Recipe, "id">[] = [
     description: "Uunilohi avokadosalaatin kanssa",
     dietCategory: "keto",
     mealType: "päivällinen",
+    proteinSource: "kala",
     ingredients: [
       { amount: 400, unit: "g", name: "lohifilee" },
       { amount: 2, unit: "kpl", name: "avokado" },
@@ -877,6 +890,7 @@ const allRecipes: Omit<Recipe, "id">[] = [
     description: "Rapea pekonisalaatti avokadolla ja kananmunalla",
     dietCategory: "keto",
     mealType: "lounas",
+    proteinSource: "porsas",
     ingredients: [
       { amount: 150, unit: "g", name: "pekoni" },
       { amount: 2, unit: "kpl", name: "avokado" },
@@ -906,6 +920,7 @@ const allRecipes: Omit<Recipe, "id">[] = [
     description: "Täyteläinen munakokkeli savulohella",
     dietCategory: "keto",
     mealType: "aamiainen",
+    proteinSource: "kala",
     ingredients: [
       { amount: 3, unit: "kpl", name: "kananmuna" },
       { amount: 50, unit: "g", name: "savulohi" },
@@ -934,6 +949,7 @@ const allRecipes: Omit<Recipe, "id">[] = [
     description: "Grillattua kanaa pestolla ja parmesaanilla",
     dietCategory: "keto",
     mealType: "lounas",
+    proteinSource: "kana",
     ingredients: [
       { amount: 300, unit: "g", name: "kananrintafilee" },
       { amount: 2, unit: "rkl", name: "pesto" },
@@ -963,6 +979,7 @@ const allRecipes: Omit<Recipe, "id">[] = [
     description: "Pannulohi yrttivoin kanssa",
     dietCategory: "keto",
     mealType: "päivällinen",
+    proteinSource: "kala",
     ingredients: [
       { amount: 400, unit: "g", name: "lohifilee" },
       { amount: 50, unit: "g", name: "voi" },
@@ -992,6 +1009,7 @@ const allRecipes: Omit<Recipe, "id">[] = [
     description: "Pähkinäinen keto-smoothie",
     dietCategory: "keto",
     mealType: "aamiainen",
+    proteinSource: "muu",
     ingredients: [
       { amount: 2, unit: "rkl", name: "maapähkinävoi" },
       { amount: 2, unit: "dl", name: "mantelijuoma" },
@@ -1379,8 +1397,16 @@ const allRecipes: Omit<Recipe, "id">[] = [
   },
 ];
 
+// Merge keto recipes from separate file
+const expandedKetoRecipes: Omit<Recipe, "id">[] = KETO_RECIPES.map((r) => ({
+  ...r,
+  dietCategory: "keto" as DietCategory,
+}));
+
+const allRecipesWithKeto = [...allRecipes, ...expandedKetoRecipes];
+
 // Assign IDs
-export const RECIPES: Recipe[] = allRecipes.map((r, i) => ({
+export const RECIPES: Recipe[] = allRecipesWithKeto.map((r, i) => ({
   ...r,
   id: i + 1,
 }));
