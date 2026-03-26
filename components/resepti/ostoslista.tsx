@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { ShoppingCart, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAppState } from "@/lib/app-state";
+import { t } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { Ingredient } from "@/lib/types";
@@ -13,6 +15,7 @@ interface OstoslistaProps {
 }
 
 export function Ostoslista({ ingredients, recipeName }: OstoslistaProps) {
+  const { locale } = useAppState();
   const [open, setOpen] = useState(false);
   const [checked, setChecked] = useState<Set<number>>(new Set());
 
@@ -33,7 +36,7 @@ export function Ostoslista({ ingredients, recipeName }: OstoslistaProps) {
         onClick={() => setOpen(true)}
       >
         <ShoppingCart className="h-4 w-4" />
-        Ostoslista
+        {t("recipe.shoppingList", locale)}
       </Button>
     );
   }
@@ -44,7 +47,7 @@ export function Ostoslista({ ingredients, recipeName }: OstoslistaProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm">
             <ShoppingCart className="h-4 w-4" />
-            Ostoslista
+            {t("recipe.shoppingList", locale)}
           </CardTitle>
           <span className="text-xs text-muted-foreground">
             {checked.size}/{ingredients.length}

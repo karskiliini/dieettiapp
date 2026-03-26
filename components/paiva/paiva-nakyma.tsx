@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Clock } from "lucide-react";
-import { DAY_NAMES, MEALS_BY_COUNT, MEAL_LABELS, type MealType } from "@/lib/constants";
+import { MEALS_BY_COUNT, type MealType } from "@/lib/constants";
 import { useAppState } from "@/lib/app-state";
 import { cn, getDateForWeekDay } from "@/lib/utils";
+import { t, dayName, mealLabel } from "@/lib/i18n";
 import { PaivaOstoslista } from "./paiva-ostoslista";
 import { RECIPES } from "@/lib/data";
 
@@ -38,7 +39,7 @@ export function PaivaNakyma({
   mealCount,
   onRecipeClick,
 }: PaivaNakymaProps) {
-  const { weekNumber, year, jiggleMode, setJiggleMode } = useAppState();
+  const { weekNumber, year, jiggleMode, setJiggleMode, locale } = useAppState();
   const totalCalories = meals.reduce((sum, m) => sum + m.recipe.calories, 0);
   const totalProtein = meals.reduce((sum, m) => sum + m.recipe.proteinGrams, 0);
   const totalCarbs = meals.reduce((sum, m) => sum + m.recipe.carbsGrams, 0);
@@ -48,7 +49,7 @@ export function PaivaNakyma({
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">
-        {DAY_NAMES[dayOfWeek]}{" "}
+        {dayName(dayOfWeek, locale)}{" "}
         <span className="text-sm font-normal text-muted-foreground">
           {getDateForWeekDay(weekNumber, year, dayOfWeek)}
         </span>
@@ -56,7 +57,7 @@ export function PaivaNakyma({
 
       {jiggleMode && (
         <p className="text-center text-xs text-muted-foreground animate-pulse">
-          Klikkaa ruokaa vaihtaaksesi sen
+          {t("picker.tapToSwap", locale)}
         </p>
       )}
 
@@ -83,7 +84,7 @@ export function PaivaNakyma({
       <Separator />
 
       <div className="rounded-lg bg-muted p-4">
-        <h3 className="mb-2 text-sm font-semibold">Päivän yhteenveto</h3>
+        <h3 className="mb-2 text-sm font-semibold">{t("day.summary", locale)}</h3>
         <div className="grid grid-cols-4 gap-4 text-center">
           <div>
             <p className="font-mono text-lg font-bold">{totalCalories}</p>
@@ -91,15 +92,15 @@ export function PaivaNakyma({
           </div>
           <div>
             <p className="font-mono text-lg font-bold">{totalProtein}g</p>
-            <p className="text-xs text-muted-foreground">Proteiini</p>
+            <p className="text-xs text-muted-foreground">{t("day.protein", locale)}</p>
           </div>
           <div>
             <p className="font-mono text-lg font-bold">{totalCarbs}g</p>
-            <p className="text-xs text-muted-foreground">Hiilihydr.</p>
+            <p className="text-xs text-muted-foreground">{t("day.carbs", locale)}</p>
           </div>
           <div>
             <p className="font-mono text-lg font-bold">{totalFat}g</p>
-            <p className="text-xs text-muted-foreground">Rasva</p>
+            <p className="text-xs text-muted-foreground">{t("day.fat", locale)}</p>
           </div>
         </div>
       </div>
@@ -114,7 +115,7 @@ export function PaivaNakyma({
             ingredients: RECIPES.find((r) => r.id === m.recipe.id)?.ingredients || [],
           },
         }))}
-        dayName={`${DAY_NAMES[dayOfWeek]} ${getDateForWeekDay(weekNumber, year, dayOfWeek)}`}
+        dayName={`${dayName(dayOfWeek, locale)} ${getDateForWeekDay(weekNumber, year, dayOfWeek)}`}
       />
     </div>
   );
@@ -141,6 +142,7 @@ function DayMealCard({
   onLongPress: () => void;
   onClick: () => void;
 }) {
+  const { locale } = useAppState();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
 
@@ -191,7 +193,7 @@ function DayMealCard({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <Badge variant="secondary" className="text-xs">
-              {MEAL_LABELS[mealType]}
+              {mealLabel(mealType, locale)}
             </Badge>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="h-3 w-3" />

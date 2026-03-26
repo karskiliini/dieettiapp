@@ -1,3 +1,7 @@
+"use client";
+
+import { useAppState } from "@/lib/app-state";
+import { t } from "@/lib/i18n";
 import type { Ingredient } from "@/lib/types";
 
 interface AinesosatProps {
@@ -5,9 +9,10 @@ interface AinesosatProps {
 }
 
 export function Ainesosat({ ingredients }: AinesosatProps) {
+  const { locale } = useAppState();
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold">Ainekset</h3>
+      <h3 className="text-sm font-semibold">{t("recipe.ingredients", locale)}</h3>
       <ul className="space-y-2">
         {ingredients.map((item, i) => (
           <li key={i} className="flex items-baseline gap-2 text-sm">

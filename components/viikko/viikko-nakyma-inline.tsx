@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ViikkoNavigaatio } from "@/components/navigaatio/viikko-navigaatio";
 import { AteriamaaraValitsin } from "@/components/navigaatio/ateriamaara-valitsin";
-import { DAY_NAMES, MEALS_BY_COUNT, MEAL_LABELS, type MealType } from "@/lib/constants";
+import { MEALS_BY_COUNT, type MealType } from "@/lib/constants";
 import { useAppState } from "@/lib/app-state";
-import { getDateForWeekDay } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { cn, getDateForWeekDay } from "@/lib/utils";
+import { t, dayName, mealLabel } from "@/lib/i18n";
 
 interface MealPlanEntry {
   dayOfWeek: number;
@@ -33,7 +33,7 @@ export function ViikkoNakymaInline({
   onDayClick,
   onRecipeClick,
 }: Props) {
-  const { weekNumber, year, jiggleMode, setJiggleMode } = useAppState();
+  const { weekNumber, year, jiggleMode, setJiggleMode, locale } = useAppState();
   const visibleMeals = MEALS_BY_COUNT[mealCount] || MEALS_BY_COUNT[3];
   const dayGroups = Array.from({ length: 7 }, (_, i) => ({
     dayOfWeek: i,
@@ -50,7 +50,7 @@ export function ViikkoNakymaInline({
       )}
       {jiggleMode && (
         <p className="shrink-0 text-center text-xs text-muted-foreground animate-pulse">
-          Klikkaa ruokaa vaihtaaksesi sen
+          {t("picker.tapToSwap", locale)}
         </p>
       )}
       <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2 scrollbar-none">
@@ -69,7 +69,7 @@ export function ViikkoNakymaInline({
                   className="cursor-pointer text-sm font-semibold hover:underline"
                   onClick={() => onDayClick(day.dayOfWeek)}
                 >
-                  {DAY_NAMES[day.dayOfWeek]}{" "}
+                  {dayName(day.dayOfWeek, locale)}{" "}
                   <span className="font-normal text-muted-foreground">
                     {getDateForWeekDay(weekNumber, year, day.dayOfWeek)}
                   </span>
@@ -84,6 +84,7 @@ export function ViikkoNakymaInline({
                       <MealButton
                         key={type}
                         mealType={type}
+                        mealLabel={mealLabel(type, locale)}
                         recipeName={meal.recipe.name}
                         calories={meal.recipe.calories}
                         jiggling={jiggleMode}
@@ -102,7 +103,7 @@ export function ViikkoNakymaInline({
                 <div className="mt-2">
                   <Separator />
                   <div className="px-2 pt-2 text-right font-mono text-xs text-muted-foreground">
-                    Yht. {totalCalories} kcal
+                    {t("week.total", locale)} {totalCalories} kcal
                   </div>
                 </div>
               </CardContent>
@@ -115,7 +116,7 @@ export function ViikkoNakymaInline({
 }
 
 function MealButton({
-  mealType,
+  mealLabel: label,
   recipeName,
   calories,
   jiggling,
@@ -123,6 +124,7 @@ function MealButton({
   onClick,
 }: {
   mealType: MealType;
+  mealLabel: string;
   recipeName: string;
   calories: number;
   jiggling: boolean;
@@ -174,7 +176,7 @@ function MealButton({
       onContextMenu={(e) => e.preventDefault()}
     >
       <span className="text-xs text-muted-foreground">
-        {MEAL_LABELS[mealType]}
+        {label}
       </span>
       <p className="truncate font-medium">{recipeName}</p>
       <span className="font-mono text-xs text-muted-foreground">

@@ -1,3 +1,8 @@
+"use client";
+
+import { useAppState } from "@/lib/app-state";
+import { t } from "@/lib/i18n";
+
 interface RavintotiedotProps {
   calories: number;
   proteinGrams: number;
@@ -11,6 +16,7 @@ export function Ravintotiedot({
   carbsGrams,
   fatGrams,
 }: RavintotiedotProps) {
+  const { locale } = useAppState();
   const total = proteinGrams + carbsGrams + fatGrams;
   const proteinPct = total > 0 ? (proteinGrams / total) * 100 : 0;
   const carbsPct = total > 0 ? (carbsGrams / total) * 100 : 0;
@@ -18,26 +24,26 @@ export function Ravintotiedot({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold">Ravintotiedot</h3>
+      <h3 className="text-sm font-semibold">{t("recipe.nutrition", locale)}</h3>
       <div className="text-center">
         <p className="font-mono text-3xl font-bold">{calories}</p>
         <p className="text-sm text-muted-foreground">kcal / annos</p>
       </div>
       <div className="space-y-3">
         <MacroBar
-          label="Proteiini"
+          label={t("day.protein", locale)}
           grams={proteinGrams}
           percentage={proteinPct}
           color="bg-blue-500"
         />
         <MacroBar
-          label="Hiilihydraatit"
+          label={t("day.carbs", locale)}
           grams={carbsGrams}
           percentage={carbsPct}
           color="bg-amber-500"
         />
         <MacroBar
-          label="Rasva"
+          label={t("day.fat", locale)}
           grams={fatGrams}
           percentage={fatPct}
           color="bg-rose-500"

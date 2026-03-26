@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { RECIPES, PROTEIN_LABELS, type Recipe, type ProteinSource } from "@/lib/data";
+import { RECIPES, type Recipe, type ProteinSource } from "@/lib/data";
 import { useAppState } from "@/lib/app-state";
 import { useFavorites } from "@/lib/favorites";
-import { MEAL_LABELS, type MealType } from "@/lib/constants";
+import type { MealType } from "@/lib/constants";
+import { t, mealLabel, proteinLabel } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Clock, Star, GripVertical, ChevronLeft } from "lucide-react";
@@ -21,7 +22,7 @@ interface Props {
 }
 
 export function ReseptiValitsin({ mealType, dayOfWeek, onSelect, onCancel }: Props) {
-  const { dietti } = useAppState();
+  const { dietti, locale } = useAppState();
   const { favorites, isFavorite, toggleFavorite, reorderFavorites } = useFavorites();
   const [activeTab, setActiveTab] = useState<ProteinSource | "all">("all");
 
@@ -47,11 +48,11 @@ export function ReseptiValitsin({ mealType, dayOfWeek, onSelect, onCancel }: Pro
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onCancel} className="gap-1 text-muted-foreground">
           <ChevronLeft className="h-4 w-4" />
-          Peruuta
+          {t("cancel", locale)}
         </Button>
         <div>
-          <h2 className="text-base font-semibold">Valitse ruoka</h2>
-          <p className="text-xs text-muted-foreground">{MEAL_LABELS[mealType]}</p>
+          <h2 className="text-base font-semibold">{t("picker.title", locale)}</h2>
+          <p className="text-xs text-muted-foreground">{mealLabel(mealType, locale)}</p>
         </div>
       </div>
 
@@ -61,7 +62,7 @@ export function ReseptiValitsin({ mealType, dayOfWeek, onSelect, onCancel }: Pro
           <TabButton
             active={activeTab === "all"}
             onClick={() => setActiveTab("all")}
-            label="Kaikki"
+            label={t("picker.all", locale)}
           />
           {PROTEIN_TABS.map((src) => {
             const count = nonFavRecipes.filter((r) => r.proteinSource === src).length;
@@ -71,7 +72,7 @@ export function ReseptiValitsin({ mealType, dayOfWeek, onSelect, onCancel }: Pro
                 key={src}
                 active={activeTab === src}
                 onClick={() => setActiveTab(src)}
-                label={`${PROTEIN_LABELS[src]} (${count})`}
+                label={`${proteinLabel(src, locale)} (${count})`}
               />
             );
           })}
@@ -81,7 +82,7 @@ export function ReseptiValitsin({ mealType, dayOfWeek, onSelect, onCancel }: Pro
       {/* Favorites section */}
       {favRecipes.length > 0 && (
         <>
-          <p className="text-xs font-semibold text-muted-foreground">Suosikit</p>
+          <p className="text-xs font-semibold text-muted-foreground">{t("picker.favorites", locale)}</p>
           <FavoritesList
             recipes={favRecipes}
             favorites={favorites}
@@ -90,7 +91,7 @@ export function ReseptiValitsin({ mealType, dayOfWeek, onSelect, onCancel }: Pro
             onReorder={reorderFavorites}
           />
           <Separator />
-          <p className="text-xs text-muted-foreground">Muut reseptit</p>
+          <p className="text-xs text-muted-foreground">{t("picker.otherRecipes", locale)}</p>
         </>
       )}
 
@@ -107,7 +108,7 @@ export function ReseptiValitsin({ mealType, dayOfWeek, onSelect, onCancel }: Pro
         ))}
         {filteredRecipes.length === 0 && (
           <p className="py-4 text-center text-sm text-muted-foreground">
-            Ei reseptejä tässä kategoriassa.
+            {t("picker.noRecipes", locale)}
           </p>
         )}
       </div>

@@ -4,8 +4,10 @@ import { useState } from "react";
 import { ShoppingCart, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MEAL_LABELS, type MealType } from "@/lib/constants";
+import type { MealType } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useAppState } from "@/lib/app-state";
+import { t, mealLabel } from "@/lib/i18n";
 
 interface Ingredient {
   amount: number;
@@ -27,6 +29,7 @@ interface Props {
 }
 
 export function PaivaOstoslista({ meals, dayName }: Props) {
+  const { locale } = useAppState();
   const [open, setOpen] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
 
@@ -62,7 +65,7 @@ export function PaivaOstoslista({ meals, dayName }: Props) {
         onClick={() => setOpen(true)}
       >
         <ShoppingCart className="h-4 w-4" />
-        Koko päivän ostoslista
+        {t("day.shoppingList", locale)}
       </Button>
     );
   }
@@ -73,7 +76,7 @@ export function PaivaOstoslista({ meals, dayName }: Props) {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm">
             <ShoppingCart className="h-4 w-4" />
-            Ostoslista — {dayName}
+            {t("day.shoppingTitle", locale)} — {dayName}
           </CardTitle>
           <span className="text-xs text-muted-foreground">
             {checked.size}/{allIngredients.length}
@@ -85,7 +88,7 @@ export function PaivaOstoslista({ meals, dayName }: Props) {
               key={m.mealType}
               className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground"
             >
-              {MEAL_LABELS[m.mealType]}: {m.recipe.name}
+              {mealLabel(m.mealType, locale)}: {m.recipe.name}
             </span>
           ))}
         </div>

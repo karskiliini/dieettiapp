@@ -1,14 +1,15 @@
 "use client";
 
 import { useAppState } from "@/lib/app-state";
+import { t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export function AteriamaaraValitsin() {
-  const { mealCount, setMealCount } = useAppState();
+  const { mealCount, setMealCount, locale } = useAppState();
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground">Ateriat:</span>
+      <span className="text-xs text-muted-foreground">{t("week.meals", locale)}:</span>
       {[3, 4, 5].map((n) => (
         <button
           key={n}

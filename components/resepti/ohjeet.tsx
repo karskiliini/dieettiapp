@@ -1,11 +1,17 @@
+"use client";
+
+import { useAppState } from "@/lib/app-state";
+import { t } from "@/lib/i18n";
+
 interface OhjeetProps {
   instructions: string[];
 }
 
 export function Ohjeet({ instructions }: OhjeetProps) {
+  const { locale } = useAppState();
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold">Valmistusohje</h3>
+      <h3 className="text-sm font-semibold">{t("recipe.instructions", locale)}</h3>
       <ol className="space-y-3">
         {instructions.map((step, i) => (
           <li key={i} className="flex gap-3 text-sm">

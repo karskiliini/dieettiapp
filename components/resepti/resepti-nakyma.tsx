@@ -2,8 +2,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Clock, Users } from "lucide-react";
-import { DIET_LABELS, MEAL_LABELS, type DietCategory, type MealType } from "@/lib/constants";
+import type { DietCategory, MealType } from "@/lib/constants";
 import type { Ingredient } from "@/lib/types";
+import { useAppState } from "@/lib/app-state";
+import { t, dietLabel, mealLabel } from "@/lib/i18n";
 import { Ravintotiedot } from "./ravintotiedot";
 import { Ainesosat } from "./ainesosat";
 import { Ohjeet } from "./ohjeet";
@@ -28,6 +30,7 @@ interface ReseptiNakymaProps {
 }
 
 export function ReseptiNakyma({ recipe }: ReseptiNakymaProps) {
+  const { locale } = useAppState();
   const totalTime = recipe.prepTimeMinutes + recipe.cookTimeMinutes;
 
   return (
@@ -37,10 +40,10 @@ export function ReseptiNakyma({ recipe }: ReseptiNakymaProps) {
         <p className="mt-1 text-muted-foreground">{recipe.description}</p>
         <div className="mt-3 flex gap-2">
           <Badge variant="secondary">
-            {DIET_LABELS[recipe.dietCategory]}
+            {dietLabel(recipe.dietCategory, locale)}
           </Badge>
           <Badge variant="outline">
-            {MEAL_LABELS[recipe.mealType]}
+            {mealLabel(recipe.mealType, locale)}
           </Badge>
         </div>
       </div>
@@ -50,7 +53,7 @@ export function ReseptiNakyma({ recipe }: ReseptiNakymaProps) {
           <CardContent className="flex flex-col items-center py-3">
             <Clock className="mb-1 h-4 w-4 text-muted-foreground" />
             <span className="font-mono text-lg font-bold">{totalTime}</span>
-            <span className="text-xs text-muted-foreground">minuuttia</span>
+            <span className="text-xs text-muted-foreground">{t("recipe.minutes", locale)}</span>
           </CardContent>
         </Card>
         <Card>
@@ -59,7 +62,7 @@ export function ReseptiNakyma({ recipe }: ReseptiNakymaProps) {
             <span className="font-mono text-lg font-bold">
               {recipe.servings}
             </span>
-            <span className="text-xs text-muted-foreground">annosta</span>
+            <span className="text-xs text-muted-foreground">{t("recipe.servings", locale)}</span>
           </CardContent>
         </Card>
         <Card>
@@ -68,7 +71,7 @@ export function ReseptiNakyma({ recipe }: ReseptiNakymaProps) {
             <span className="font-mono text-lg font-bold">
               {recipe.calories}
             </span>
-            <span className="text-xs text-muted-foreground">/ annos</span>
+            <span className="text-xs text-muted-foreground">{t("recipe.perServing", locale)}</span>
           </CardContent>
         </Card>
       </div>

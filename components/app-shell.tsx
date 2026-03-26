@@ -5,13 +5,15 @@ import { AppProvider, useAppState } from "@/lib/app-state";
 import { useSwipeBack } from "@/lib/use-swipe";
 import { MEALS_BY_COUNT, type MealType } from "@/lib/constants";
 import { getMealPlanForWeek, RECIPES } from "@/lib/data";
+import { t, mealLabel } from "@/lib/i18n";
 import { DieettiTabs } from "./navigaatio/dieetti-tabs";
 import { ViikkoNakymaInline } from "./viikko/viikko-nakyma-inline";
 import { PaivaNakyma } from "./paiva/paiva-nakyma";
 import { ReseptiNakyma } from "./resepti/resepti-nakyma";
 import { ReseptiValitsin } from "./resepti/resepti-valitsin";
 import { Ostoslista } from "./resepti/ostoslista";
-import { ChevronLeft } from "lucide-react";
+import { AsetuksetNakyma } from "./asetukset/asetukset-nakyma";
+import { ChevronLeft, Settings } from "lucide-react";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
 
@@ -19,10 +21,12 @@ type View =
   | { type: "viikko" }
   | { type: "paiva"; dayOfWeek: number }
   | { type: "resepti"; recipeId: number }
-  | { type: "valitse-resepti"; dayOfWeek: number; mealType: MealType };
+  | { type: "valitse-resepti"; dayOfWeek: number; mealType: MealType }
+  | { type: "asetukset" };
 
 function AppContent() {
   const {
+    locale,
     dietti,
     weekNumber,
     year,
@@ -35,7 +39,6 @@ function AppContent() {
   const [view, setView] = useState<View>({ type: "viikko" });
   const [history, setHistory] = useState<View[]>([]);
   const [slideDir, setSlideDir] = useState<"in" | "out" | null>(null);
-  // Track if last navigation was a swipe (skip slideDir animation)
   const [wasSwipe, setWasSwipe] = useState(false);
 
   const canGoBack = view.type !== "viikko";
@@ -51,33 +54,23 @@ function AppContent() {
     [view]
   );
 
-  // goBack used by button — plays animation
   const goBackAnimated = useCallback(() => {
     setWasSwipe(false);
     setSlideDir("out");
     setHistory((h) => {
       const prev = h[h.length - 1];
-      if (prev) {
-        setView(prev);
-        return h.slice(0, -1);
-      }
-      setView({ type: "viikko" });
-      return [];
+      if (prev) { setView(prev); return h.slice(0, -1); }
+      setView({ type: "viikko" }); return [];
     });
   }, []);
 
-  // goBack used by swipe — no animation (swipe already handled it)
   const goBackSilent = useCallback(() => {
     setWasSwipe(true);
     setSlideDir(null);
     setHistory((h) => {
       const prev = h[h.length - 1];
-      if (prev) {
-        setView(prev);
-        return h.slice(0, -1);
-      }
-      setView({ type: "viikko" });
-      return [];
+      if (prev) { setView(prev); return h.slice(0, -1); }
+      setView({ type: "viikko" }); return [];
     });
   }, []);
 
@@ -92,7 +85,6 @@ function AppContent() {
     onSwipeBack: goBackSilent,
   });
 
-  // Build meal plan with overrides
   const visibleMeals = MEALS_BY_COUNT[mealCount] || MEALS_BY_COUNT[3];
   const baseMealPlan = getMealPlanForWeek(weekNumber, year).filter(
     (m) => m.dietCategory === dietti && visibleMeals.includes(m.mealType)
@@ -120,7 +112,6 @@ function AppContent() {
   const handleBackgroundClick = useCallback(
     (e: React.MouseEvent) => {
       if (!jiggleMode) return;
-      // If the click landed on a meal item (or inside one), don't exit
       const target = e.target as HTMLElement;
       if (target.closest("[data-meal]")) return;
       setJiggleMode(false);
@@ -128,7 +119,6 @@ function AppContent() {
     [jiggleMode, setJiggleMode]
   );
 
-  // Animation classes for non-swipe navigations
   const slideClass =
     !wasSwipe && slideDir === "in"
       ? "animate-slide-in"
@@ -139,9 +129,7 @@ function AppContent() {
   const isSwiping = swipe.isDragging || swipe.isCompleting;
   const transition = swipe.isCompleting
     ? "transform 0.25s ease-out, opacity 0.25s ease-out, box-shadow 0.25s ease-out"
-    : swipe.isDragging
-      ? "none"
-      : undefined;
+    : swipe.isDragging ? "none" : undefined;
 
   const prevScale = 0.92 + swipe.progress * 0.08;
   const prevOpacity = 0.4 + swipe.progress * 0.6;
@@ -154,33 +142,28 @@ function AppContent() {
           <div className="flex items-center justify-between px-4 py-3">
             {showBackBtn ? (
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={
-                  isBack
-                    ? undefined
-                    : () => {
-                        setJiggleMode(false);
-                        goBackAnimated();
-                      }
-                }
+                variant="ghost" size="sm"
+                onClick={isBack ? undefined : () => { setJiggleMode(false); goBackAnimated(); }}
                 className="gap-1 text-muted-foreground"
               >
                 <ChevronLeft className="h-4 w-4" />
-                Takaisin
+                {t("back", locale)}
               </Button>
             ) : (
-              <h1 className="text-lg font-bold">Dieettiapp</h1>
+              <h1 className="text-lg font-bold">{t("appName", locale)}</h1>
             )}
-            {jiggleMode && v.type !== "valitse-resepti" && !isBack && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setJiggleMode(false)}
-              >
-                Valmis
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {jiggleMode && v.type !== "valitse-resepti" && !isBack && (
+                <Button variant="secondary" size="sm" onClick={() => setJiggleMode(false)}>
+                  {t("done", locale)}
+                </Button>
+              )}
+              {v.type === "viikko" && !isBack && (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => goTo({ type: "asetukset" })}>
+                  <Settings className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
           {v.type === "viikko" && !jiggleMode && <DieettiTabs />}
         </div>
@@ -192,14 +175,9 @@ function AppContent() {
     if (v.type === "viikko") {
       return (
         <ViikkoNakymaInline
-          mealPlan={mealPlan}
-          mealCount={mealCount}
-          onDayClick={(day) => {
-            if (!jiggleMode) goTo({ type: "paiva", dayOfWeek: day });
-          }}
-          onRecipeClick={(id, day, mealType) =>
-            handleMealClick(id, day, mealType)
-          }
+          mealPlan={mealPlan} mealCount={mealCount}
+          onDayClick={(day) => { if (!jiggleMode) goTo({ type: "paiva", dayOfWeek: day }); }}
+          onRecipeClick={(id, day, mealType) => handleMealClick(id, day, mealType)}
         />
       );
     }
@@ -209,43 +187,39 @@ function AppContent() {
           dayOfWeek={v.dayOfWeek}
           meals={mealPlan.filter((m) => m.dayOfWeek === v.dayOfWeek) as any}
           mealCount={mealCount}
-          onRecipeClick={(id, mealType) =>
-            handleMealClick(id, v.dayOfWeek, mealType)
-          }
+          onRecipeClick={(id, mealType) => handleMealClick(id, v.dayOfWeek, mealType)}
         />
       );
     }
     if (v.type === "resepti") {
-      return <ReseptiView recipeId={v.recipeId} />;
+      const recipe = RECIPES.find((r) => r.id === v.recipeId);
+      if (!recipe) return <p className="text-muted-foreground">{t("error.notFound", locale)}</p>;
+      return (
+        <div className="space-y-6">
+          <ReseptiNakyma recipe={recipe} />
+          <Separator />
+          <Ostoslista ingredients={recipe.ingredients} recipeName={recipe.name} />
+        </div>
+      );
     }
     if (v.type === "valitse-resepti") {
       return (
         <ReseptiValitsin
-          mealType={v.mealType}
-          dayOfWeek={v.dayOfWeek}
+          mealType={v.mealType} dayOfWeek={v.dayOfWeek}
           onCancel={goBackAnimated}
-          onSelect={(recipeId) => {
-            overrideMeal(v.dayOfWeek, v.mealType, recipeId);
-            goBackAnimated();
-          }}
+          onSelect={(recipeId) => { overrideMeal(v.dayOfWeek, v.mealType, recipeId); goBackAnimated(); }}
         />
       );
+    }
+    if (v.type === "asetukset") {
+      return <AsetuksetNakyma />;
     }
     return null;
   }
 
-  // Full screen for a view (header + content)
-  function renderFullScreen(
-    v: View,
-    isBack: boolean,
-    style?: React.CSSProperties,
-    className?: string
-  ) {
+  function renderFullScreen(v: View, isBack: boolean, style?: React.CSSProperties, className?: string) {
     return (
-      <div
-        className={`absolute inset-0 flex flex-col bg-background ${className || ""}`}
-        style={style}
-      >
+      <div className={`absolute inset-0 flex flex-col bg-background ${className || ""}`} style={style}>
         {renderHeader(v, isBack)}
         <div
           className="flex-1 overflow-auto p-4"
@@ -269,44 +243,18 @@ function AppContent() {
     >
       {isSwiping ? (
         <>
-          {/* Behind: previous view (complete with header) */}
-          {prevView &&
-            renderFullScreen(prevView, true, {
-              transform: `scale(${prevScale})`,
-              opacity: prevOpacity,
-              transition,
-              zIndex: 1,
-            })}
-
-          {/* Front: current view sliding away */}
+          {prevView && renderFullScreen(prevView, true, {
+            transform: `scale(${prevScale})`, opacity: prevOpacity, transition, zIndex: 1,
+          })}
           {renderFullScreen(view, false, {
             transform: `translateX(${swipe.dragX}px)`,
-            boxShadow:
-              swipe.dragX > 0
-                ? "-8px 0 30px rgba(0,0,0,0.15)"
-                : "none",
-            transition,
-            zIndex: 2,
+            boxShadow: swipe.dragX > 0 ? "-8px 0 30px rgba(0,0,0,0.15)" : "none",
+            transition, zIndex: 2,
           })}
         </>
       ) : (
-        /* Normal: single view */
         renderFullScreen(view, false, { zIndex: 1 }, slideClass)
       )}
-    </div>
-  );
-}
-
-function ReseptiView({ recipeId }: { recipeId: number }) {
-  const recipe = RECIPES.find((r) => r.id === recipeId);
-  if (!recipe)
-    return <p className="text-muted-foreground">Reseptiä ei löytynyt.</p>;
-
-  return (
-    <div className="space-y-6">
-      <ReseptiNakyma recipe={recipe} />
-      <Separator />
-      <Ostoslista ingredients={recipe.ingredients} recipeName={recipe.name} />
     </div>
   );
 }
