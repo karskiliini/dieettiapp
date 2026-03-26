@@ -149,7 +149,7 @@ function AppContent() {
   function renderHeader(v: View, isBack: boolean) {
     const showBackBtn = v.type !== "viikko";
     return (
-      <header className="shrink-0 border-b border-border bg-background">
+      <header className="shrink-0 border-b border-border bg-background" style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <div className="mx-auto max-w-5xl">
           <div className="flex items-center justify-between px-4 py-3">
             {showBackBtn ? (
@@ -249,6 +249,7 @@ function AppContent() {
         {renderHeader(v, isBack)}
         <div
           className="flex-1 overflow-auto p-4"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
           onClick={isBack ? undefined : handleBackgroundClick}
         >
           <div className="mx-auto flex h-full max-w-5xl flex-col">
