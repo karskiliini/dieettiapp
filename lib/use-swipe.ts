@@ -63,20 +63,22 @@ export function useSwipeBack({ canSwipeBack, onSwipeBack }: SwipeConfig) {
       const dx = e.changedTouches[0].clientX - touchStart.current.x;
       const threshold = screenWidth.current * 0.5;
 
+      touchStart.current = null;
+      locked.current = null;
+
       if (dx > threshold) {
+        // Animate off-screen, then complete
         setIsCompleting(true);
         setDragX(screenWidth.current);
         setTimeout(() => {
+          // All state changes in one synchronous batch = one React render
           onSwipeBack();
-          // Reset after state change
-          requestAnimationFrame(() => {
-            setIsDragging(false);
-            setIsCompleting(false);
-            setDragX(0);
-          });
+          setIsDragging(false);
+          setIsCompleting(false);
+          setDragX(0);
         }, 250);
       } else {
-        // Animate snap back
+        // Snap back
         setIsCompleting(true);
         setDragX(0);
         setTimeout(() => {
@@ -84,9 +86,6 @@ export function useSwipeBack({ canSwipeBack, onSwipeBack }: SwipeConfig) {
           setIsCompleting(false);
         }, 250);
       }
-
-      touchStart.current = null;
-      locked.current = null;
     },
     [isDragging, onSwipeBack]
   );
