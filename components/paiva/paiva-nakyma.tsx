@@ -1,12 +1,13 @@
 "use client";
 
+import { useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Clock } from "lucide-react";
 import { DAY_NAMES, MEALS_BY_COUNT, MEAL_LABELS, type MealType } from "@/lib/constants";
 import { useAppState } from "@/lib/app-state";
-import { getDateForWeekDay } from "@/lib/utils";
+import { cn, getDateForWeekDay } from "@/lib/utils";
 import { PaivaOstoslista } from "./paiva-ostoslista";
 import { RECIPES } from "@/lib/data";
 
@@ -28,7 +29,7 @@ interface PaivaNakymaProps {
   dayOfWeek: number;
   meals: MealEntry[];
   mealCount: number;
-  onRecipeClick?: (id: number) => void;
+  onRecipeClick?: (id: number, mealType?: MealType) => void;
 }
 
 export function PaivaNakyma({
@@ -37,7 +38,7 @@ export function PaivaNakyma({
   mealCount,
   onRecipeClick,
 }: PaivaNakymaProps) {
-  const { weekNumber, year } = useAppState();
+  const { weekNumber, year, jiggleMode, setJiggleMode } = useAppState();
   const totalCalories = meals.reduce((sum, m) => sum + m.recipe.calories, 0);
   const totalProtein = meals.reduce((sum, m) => sum + m.recipe.proteinGrams, 0);
   const totalCarbs = meals.reduce((sum, m) => sum + m.recipe.carbsGrams, 0);
@@ -53,6 +54,12 @@ export function PaivaNakyma({
         </span>
       </h2>
 
+      {jiggleMode && (
+        <p className="text-center text-xs text-muted-foreground animate-pulse">
+          Klikkaa ruokaa vaihtaaksesi sen
+        </p>
+      )}
+
       <div className="space-y-3">
         {visibleMeals.map((type) => {
           const meal = meals.find((m) => m.mealType === type);
@@ -60,40 +67,15 @@ export function PaivaNakyma({
           const totalTime =
             meal.recipe.prepTimeMinutes + meal.recipe.cookTimeMinutes;
           return (
-            <button
+            <DayMealCard
               key={type}
-              onClick={() => onRecipeClick?.(meal.recipe.id)}
-              className="w-full text-left"
-            >
-              <Card className="transition-colors hover:bg-accent/50">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="secondary" className="text-xs">
-                      {MEAL_LABELS[type]}
-                    </Badge>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {totalTime} min
-                    </div>
-                  </div>
-                  <CardTitle className="text-base">
-                    {meal.recipe.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-sm font-semibold">
-                      {meal.recipe.calories} kcal
-                    </span>
-                    <div className="flex gap-3 text-xs text-muted-foreground">
-                      <span>P {meal.recipe.proteinGrams}g</span>
-                      <span>HH {meal.recipe.carbsGrams}g</span>
-                      <span>R {meal.recipe.fatGrams}g</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </button>
+              mealType={type}
+              recipe={meal.recipe}
+              totalTime={totalTime}
+              jiggling={jiggleMode}
+              onLongPress={() => setJiggleMode(true)}
+              onClick={() => onRecipeClick?.(meal.recipe.id, type)}
+            />
           );
         })}
       </div>
@@ -134,6 +116,102 @@ export function PaivaNakyma({
         }))}
         dayName={`${DAY_NAMES[dayOfWeek]} ${getDateForWeekDay(weekNumber, year, dayOfWeek)}`}
       />
+    </div>
+  );
+}
+
+function DayMealCard({
+  mealType,
+  recipe,
+  totalTime,
+  jiggling,
+  onLongPress,
+  onClick,
+}: {
+  mealType: MealType;
+  recipe: {
+    name: string;
+    calories: number;
+    proteinGrams: number;
+    carbsGrams: number;
+    fatGrams: number;
+  };
+  totalTime: number;
+  jiggling: boolean;
+  onLongPress: () => void;
+  onClick: () => void;
+}) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+
+  const handleTouchStart = () => {
+    didLongPress.current = false;
+    timerRef.current = setTimeout(() => {
+      didLongPress.current = true;
+      onLongPress();
+      if (navigator.vibrate) navigator.vibrate(30);
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (!didLongPress.current) {
+      onClick();
+    }
+  };
+
+  const handleTouchMove = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "w-full text-left select-none cursor-pointer",
+        jiggling && "animate-jiggle"
+      )}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
+      onMouseDown={handleTouchStart}
+      onMouseUp={handleTouchEnd}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <Card className={cn(
+        "transition-colors hover:bg-accent/50",
+        jiggling && "ring-1 ring-primary/30 bg-accent/30"
+      )}>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <Badge variant="secondary" className="text-xs">
+              {MEAL_LABELS[mealType]}
+            </Badge>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              {totalTime} min
+            </div>
+          </div>
+          <CardTitle className="text-base">{recipe.name}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-sm font-semibold">
+              {recipe.calories} kcal
+            </span>
+            <div className="flex gap-3 text-xs text-muted-foreground">
+              <span>P {recipe.proteinGrams}g</span>
+              <span>HH {recipe.carbsGrams}g</span>
+              <span>R {recipe.fatGrams}g</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

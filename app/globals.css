@@ -168,3 +168,21 @@
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* iOS-style jiggle animation */
+@keyframes jiggle {
+  0% { transform: rotate(-1.2deg); }
+  25% { transform: rotate(1.2deg); }
+  50% { transform: rotate(-0.8deg); }
+  75% { transform: rotate(0.8deg); }
+  100% { transform: rotate(-1.2deg); }
+}
+
+.animate-jiggle {
+  animation: jiggle 0.3s ease-in-out infinite;
+}
+
+/* Stagger jiggle so cards don't all sync */
+.animate-jiggle:nth-child(2n) { animation-delay: 0.05s; }
+.animate-jiggle:nth-child(3n) { animation-delay: 0.1s; }
+.animate-jiggle:nth-child(5n) { animation-delay: 0.15s; }

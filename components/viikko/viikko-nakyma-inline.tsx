@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ViikkoNavigaatio } from "@/components/navigaatio/viikko-navigaatio";
@@ -7,6 +8,7 @@ import { AteriamaaraValitsin } from "@/components/navigaatio/ateriamaara-valitsi
 import { DAY_NAMES, MEALS_BY_COUNT, MEAL_LABELS, type MealType } from "@/lib/constants";
 import { useAppState } from "@/lib/app-state";
 import { getDateForWeekDay } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface MealPlanEntry {
   dayOfWeek: number;
@@ -22,7 +24,7 @@ interface Props {
   mealPlan: MealPlanEntry[];
   mealCount: number;
   onDayClick: (day: number) => void;
-  onRecipeClick: (id: number) => void;
+  onRecipeClick: (id: number, day: number, mealType: MealType) => void;
 }
 
 export function ViikkoNakymaInline({
@@ -31,7 +33,7 @@ export function ViikkoNakymaInline({
   onDayClick,
   onRecipeClick,
 }: Props) {
-  const { weekNumber, year } = useAppState();
+  const { weekNumber, year, jiggleMode, setJiggleMode } = useAppState();
   const visibleMeals = MEALS_BY_COUNT[mealCount] || MEALS_BY_COUNT[3];
   const dayGroups = Array.from({ length: 7 }, (_, i) => ({
     dayOfWeek: i,
@@ -40,10 +42,17 @@ export function ViikkoNakymaInline({
 
   return (
     <div className="flex h-full flex-col gap-3">
-      <div className="flex shrink-0 items-center justify-between">
-        <ViikkoNavigaatio />
-        <AteriamaaraValitsin />
-      </div>
+      {!jiggleMode && (
+        <div className="flex shrink-0 items-center justify-between">
+          <ViikkoNavigaatio />
+          <AteriamaaraValitsin />
+        </div>
+      )}
+      {jiggleMode && (
+        <p className="shrink-0 text-center text-xs text-muted-foreground animate-pulse">
+          Klikkaa ruokaa vaihtaaksesi sen
+        </p>
+      )}
       <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2 scrollbar-none">
         {dayGroups.map((day) => {
           const totalCalories = day.meals.reduce(
@@ -72,21 +81,21 @@ export function ViikkoNakymaInline({
                     const meal = day.meals.find((m) => m.mealType === type);
                     if (!meal) return null;
                     return (
-                      <button
+                      <MealButton
                         key={type}
-                        onClick={() => onRecipeClick(meal.recipe.id)}
-                        className="block w-full rounded-md p-2 text-left text-sm transition-colors hover:bg-accent"
-                      >
-                        <span className="text-xs text-muted-foreground">
-                          {MEAL_LABELS[type]}
-                        </span>
-                        <p className="truncate font-medium">
-                          {meal.recipe.name}
-                        </p>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {meal.recipe.calories} kcal
-                        </span>
-                      </button>
+                        mealType={type}
+                        recipeName={meal.recipe.name}
+                        calories={meal.recipe.calories}
+                        jiggling={jiggleMode}
+                        onLongPress={() => setJiggleMode(true)}
+                        onClick={() =>
+                          onRecipeClick(
+                            meal.recipe.id,
+                            day.dayOfWeek,
+                            type
+                          )
+                        }
+                      />
                     );
                   })}
                 </div>
@@ -101,6 +110,75 @@ export function ViikkoNakymaInline({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function MealButton({
+  mealType,
+  recipeName,
+  calories,
+  jiggling,
+  onLongPress,
+  onClick,
+}: {
+  mealType: MealType;
+  recipeName: string;
+  calories: number;
+  jiggling: boolean;
+  onLongPress: () => void;
+  onClick: () => void;
+}) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+
+  const handleTouchStart = useCallback(() => {
+    didLongPress.current = false;
+    timerRef.current = setTimeout(() => {
+      didLongPress.current = true;
+      onLongPress();
+      // Haptic feedback if available
+      if (navigator.vibrate) navigator.vibrate(30);
+    }, 500);
+  }, [onLongPress]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (!didLongPress.current) {
+      onClick();
+    }
+  }, [onClick]);
+
+  const handleTouchMove = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  return (
+    <div
+      className={cn(
+        "block w-full rounded-md p-2 text-left text-sm transition-colors hover:bg-accent cursor-pointer select-none",
+        jiggling && "animate-jiggle ring-1 ring-primary/30 bg-accent/30"
+      )}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
+      onMouseDown={handleTouchStart}
+      onMouseUp={handleTouchEnd}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <span className="text-xs text-muted-foreground">
+        {MEAL_LABELS[mealType]}
+      </span>
+      <p className="truncate font-medium">{recipeName}</p>
+      <span className="font-mono text-xs text-muted-foreground">
+        {calories} kcal
+      </span>
     </div>
   );
 }
