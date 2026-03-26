@@ -121,7 +121,7 @@ export function PaivaNakyma({ dayOfWeek, meals, mealCount, onRecipeClick, onSwap
   );
 }
 
-// Swipeable meal row: swipe left reveals "Vaihda" button
+// Swipeable meal row: swipe left past 25% → icon emphasizes → auto-navigate on release
 function SwipeableMealRow({
   label, recipe, totalTime, status, swapLabel, onClick, onSwap,
 }: {
@@ -131,18 +131,22 @@ function SwipeableMealRow({
   onClick: () => void; onSwap: () => void;
 }) {
   const [offsetX, setOffsetX] = useState(0);
-  const [isRevealed, setIsRevealed] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const locked = useRef<"h" | "v" | null>(null);
   const didMove = useRef(false);
-  const BUTTON_WIDTH = 80;
+  const cardWidth = useRef(typeof window !== "undefined" ? window.innerWidth : 375);
 
   const isSkipped = status.status === "skipped";
+  const THRESHOLD = cardWidth.current * 0.25;
+  const triggered = offsetX < -THRESHOLD;
 
   function handleTouchStart(e: React.TouchEvent) {
     touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     locked.current = null;
     didMove.current = false;
+    setIsAnimating(false);
+    cardWidth.current = window.innerWidth;
   }
 
   function handleTouchMove(e: React.TouchEvent) {
@@ -157,53 +161,65 @@ function SwipeableMealRow({
 
     didMove.current = true;
     e.preventDefault();
-
-    const base = isRevealed ? -BUTTON_WIDTH : 0;
-    const raw = base + dx;
-    // Clamp: can't swipe right past 0, rubber band past button width
-    const clamped = Math.min(0, raw < -BUTTON_WIDTH ? -BUTTON_WIDTH + (raw + BUTTON_WIDTH) * 0.3 : raw);
+    // Only allow left swipe, with gentle resistance past threshold
+    const clamped = Math.min(0, dx);
     setOffsetX(clamped);
   }
 
   function handleTouchEnd() {
-    if (!didMove.current && !isRevealed) {
-      touchStart.current = null;
+    touchStart.current = null;
+
+    if (!didMove.current) {
       onClick();
       return;
     }
-    if (!didMove.current && isRevealed) {
-      // Tap while revealed → close
-      setOffsetX(0);
-      setIsRevealed(false);
-      touchStart.current = null;
-      return;
-    }
 
-    // Decide: reveal or close
-    if (offsetX < -BUTTON_WIDTH / 2) {
-      setOffsetX(-BUTTON_WIDTH);
-      setIsRevealed(true);
+    if (triggered) {
+      // Past threshold → animate fully left and navigate
+      setIsAnimating(true);
+      setOffsetX(-cardWidth.current);
+      setTimeout(() => {
+        onSwap();
+        // Reset after navigation
+        setOffsetX(0);
+        setIsAnimating(false);
+      }, 250);
     } else {
+      // Snap back
+      setIsAnimating(true);
       setOffsetX(0);
-      setIsRevealed(false);
+      setTimeout(() => setIsAnimating(false), 250);
     }
-    touchStart.current = null;
   }
 
-  const transition = didMove.current && locked.current === "h" ? "none" : "transform 0.25s ease-out";
+  // Icon scale: grows from 1.0 to 1.4 as user approaches/passes threshold
+  const swipeProgress = Math.min(Math.abs(offsetX) / THRESHOLD, 1);
+  const iconScale = 1 + swipeProgress * 0.4;
+  const bgOpacity = 0.6 + swipeProgress * 0.4;
 
   return (
     <div className="relative rounded-[10px] overflow-hidden" style={{ background: "var(--ios-card)" }}>
-      {/* Swap button behind */}
+      {/* Swap action behind — grows as user swipes */}
       <div
-        className="absolute right-0 top-0 bottom-0 flex items-center justify-center cursor-pointer"
-        style={{ width: BUTTON_WIDTH, background: "var(--ios-blue)" }}
-        onClick={() => { setOffsetX(0); setIsRevealed(false); onSwap(); }}
+        className="absolute right-0 top-0 bottom-0 flex items-center justify-center"
+        style={{
+          width: Math.max(Math.abs(offsetX), 0),
+          background: `rgba(10,132,255,${bgOpacity})`,
+          transition: isAnimating ? "width 0.25s ease-out" : "none",
+        }}
       >
-        <div className="flex flex-col items-center gap-0.5">
-          <ArrowLeftRight className="h-5 w-5 text-white" />
-          <span className="text-[11px] font-medium text-white">{swapLabel}</span>
-        </div>
+        {Math.abs(offsetX) > 20 && (
+          <div
+            className="flex flex-col items-center gap-0.5"
+            style={{
+              transform: `scale(${iconScale})`,
+              transition: isAnimating ? "transform 0.15s ease-out" : "transform 0.1s ease-out",
+            }}
+          >
+            <ArrowLeftRight className="h-5 w-5 text-white" />
+            <span className="text-[11px] font-semibold text-white">{swapLabel}</span>
+          </div>
+        )}
       </div>
 
       {/* Foreground card */}
@@ -212,7 +228,7 @@ function SwipeableMealRow({
         className="relative cursor-pointer select-none"
         style={{
           transform: `translateX(${offsetX}px)`,
-          transition,
+          transition: isAnimating ? "transform 0.25s ease-out" : "none",
           background: "var(--ios-card)",
           opacity: isSkipped ? 0.4 : 1,
         }}
