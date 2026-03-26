@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 
-const STORAGE_KEY = "dieettiapp-favorites";
+const STORAGE_KEY = "myplate-favorites";
 
 interface FavoritesData {
   ids: number[]; // ordered list of favorite recipe IDs

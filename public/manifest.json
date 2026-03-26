@@ -1,11 +1,11 @@
 {
-  "name": "Dieettiapp",
-  "short_name": "Dieettiapp",
-  "description": "Viikottainen ruokalista eri dieettikategorioille",
-  "start_url": "/viikko?dietti=keto",
+  "name": "myPlate",
+  "short_name": "myPlate",
+  "description": "Weekly meal planner for different diets",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#171717",
-  "theme_color": "#171717",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "lang": "fi",
   "icons": [
     {

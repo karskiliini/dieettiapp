@@ -2,7 +2,7 @@ export type Locale = "fi" | "en";
 
 const translations = {
   // App
-  appName: { fi: "Dieettiapp", en: "DietApp" },
+  appName: { fi: "myPlate", en: "myPlate" },
   back: { fi: "Takaisin", en: "Back" },
   done: { fi: "Valmis", en: "Done" },
   cancel: { fi: "Peruuta", en: "Cancel" },

@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dieettiapp",
+  title: "myPlate",
   description: "Viikottainen ruokalista eri dieettikategorioille",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Dieettiapp",
+    title: "myPlate",
   },
 };
 

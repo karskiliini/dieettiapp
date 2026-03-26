@@ -12,7 +12,7 @@ function overrideKey(weekNumber: number, year: number, dayOfWeek: number, mealTy
 function loadLocale(): Locale {
   if (typeof window === "undefined") return "fi";
   try {
-    const saved = localStorage.getItem("dieettiapp-locale");
+    const saved = localStorage.getItem("myplate-locale");
     if (saved === "en" || saved === "fi") return saved;
   } catch {}
   return "fi";
@@ -53,7 +53,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
-    try { localStorage.setItem("dieettiapp-locale", l); } catch {}
+    try { localStorage.setItem("myplate-locale", l); } catch {}
   }, []);
 
   function setWeek(w: number, y: number) {
