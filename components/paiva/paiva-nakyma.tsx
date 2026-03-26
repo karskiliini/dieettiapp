@@ -172,6 +172,7 @@ function DayMealCard({
 
   return (
     <div
+      data-meal
       className={cn(
         "w-full text-left select-none cursor-pointer",
         jiggling && "animate-jiggle"

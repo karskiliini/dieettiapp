@@ -161,6 +161,7 @@ function MealButton({
 
   return (
     <div
+      data-meal
       className={cn(
         "block w-full rounded-md p-2 text-left text-sm transition-colors hover:bg-accent cursor-pointer select-none",
         jiggling && "animate-jiggle ring-1 ring-primary/30 bg-accent/30"

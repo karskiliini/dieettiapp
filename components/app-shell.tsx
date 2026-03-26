@@ -120,10 +120,10 @@ function AppContent() {
   const handleBackgroundClick = useCallback(
     (e: React.MouseEvent) => {
       if (!jiggleMode) return;
+      // If the click landed on a meal item (or inside one), don't exit
       const target = e.target as HTMLElement;
-      if (target === e.currentTarget) {
-        setJiggleMode(false);
-      }
+      if (target.closest("[data-meal]")) return;
+      setJiggleMode(false);
     },
     [jiggleMode, setJiggleMode]
   );
