@@ -111,10 +111,19 @@ function FavoritesList({ recipes, favorites, onSelect, onToggleFavorite, onReord
   const [itemHeight, setItemHeight] = useState(60);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // Snapshot of original item positions at drag start (before transforms)
+  const originalRects = useRef<{ top: number; height: number }[]>([]);
 
   const handleTouchStart = useCallback((index: number, y: number) => {
-    const el = itemRefs.current[index];
-    if (el) setItemHeight(el.getBoundingClientRect().height);
+    // Capture all original positions before any transforms
+    const rects = itemRefs.current.map((el) => {
+      if (!el) return { top: 0, height: 60 };
+      const r = el.getBoundingClientRect();
+      return { top: r.top, height: r.height };
+    });
+    originalRects.current = rects;
+    const h = rects[index]?.height ?? 60;
+    setItemHeight(h);
     setDragIndex(index);
     setOverIndex(index);
     setStartY(y);
@@ -124,12 +133,10 @@ function FavoritesList({ recipes, favorites, onSelect, onToggleFavorite, onReord
   const handleTouchMove = useCallback((y: number) => {
     if (dragIndex === null) return;
     setDragY(y - startY);
-    // Determine which slot we're over
-    for (let i = 0; i < itemRefs.current.length; i++) {
-      const el = itemRefs.current[i];
-      if (!el) continue;
-      const rect = el.getBoundingClientRect();
-      const mid = rect.top + rect.height / 2;
+    // Use original positions to determine slot
+    const rects = originalRects.current;
+    for (let i = 0; i < rects.length; i++) {
+      const mid = rects[i].top + rects[i].height / 2;
       if (y < mid) { setOverIndex(i); return; }
     }
     setOverIndex(recipes.length - 1);
